@@ -10,7 +10,7 @@ import platform
 from katheryne.light_modules.utils.checkpoints import get_lastest_checkpoint
 from katheryne.light_modules.models.pretrain_model import PretrainLanguageModel
 from katheryne.utils.hparams import HParams
-from katheryne.data.pretrain import create_pretrain_dataset
+from katheryne.data.instruction import create_instruction_dataset
 from katheryne.data.collators import DataCollatorWithPadding
 
 from katheryne.utils.ds_utils import get_train_ds_config
@@ -245,3 +245,6 @@ def main():
     ckpt_path = get_lastest_checkpoint("./lightning_logs", "checkpoints")
 
     trainer.fit(model=model, train_dataloaders=train_dataloader, val_dataloaders=valid_dataloader, ckpt_path=ckpt_path)
+
+if __name__ == "__main__":
+    main()

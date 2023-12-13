@@ -11,18 +11,64 @@ import datasets
 import torch
 from torch.utils.data import Dataset, Subset, ConcatDataset
 from tqdm import tqdm
-from katheryne.data.datasets.pretrain_datasets import get_raw_dataset
-from katheryne.data.datasets import PretrainDataset, PretrainUniformDataset
+# from katheryne.data.datasets.pretrain_datasets import get_raw_dataset
+# from katheryne.data.datasets import PretrainDataset, PretrainUniformDataset
 
 from katheryne.utils.data.data_utils import get_shuffle_idx
 from katheryne.utils.diskist import Diskist, extend_diskist, write_diskist
 from katheryne.utils.utils import chunked
 
-def create_uniform_dataset(current_subset: datasets.Dataset, dataset_cache_path: Optional[str] = None):
-    if not os.path.exists(dataset_cache_path):
-        current_subset.save_to_disk(dataset_cache_path, max_shard_size="4G", num_proc=8)
-    pretrain_dataset = datasets.load_from_disk(dataset_cache_path)
-    return PretrainUniformDataset(pretrain_dataset)
+from datasets import load_dataset
+
+def split_dataset(dataset):
+    # 90% train, 10% test + validation
+    train_testvalid = dataset.train_test_split(test_size=0.1)
+    # Split the 10% test + valid in half test, half valid
+    test_valid = train_testvalid['test'].train_test_split(test_size=0.5)
+    # gather everyone if you want to have a single DatasetDict
+    train_test_valid_dataset = datasets.DatasetDict({
+        'train': train_testvalid['train'],
+        'test': test_valid['test'],
+        'valid': test_valid['train']
+    })
+
+    return train_test_valid_dataset
+
+def load_plain_text(dataset_name, field, data_dir=None, data_files=None):
+    raw_datasets = load_dataset(dataset_name, data_dir=data_dir, data_files=data_files)
+    train_dataset = raw_datasets["train"]
+    cols = train_dataset.column_names
+    if isinstance(field, str):
+        def keep_field_only(sample):
+            return {"text": sample[field]}
+        cols.remove(field)
+        train_dataset = train_dataset.remove_columns(cols)
+        if field == "text":
+            text_only_dataset = train_dataset
+        else:
+            text_only_dataset = train_dataset.rename_column(field, "text")
+    else:
+        def keep_field_only(sample):
+            out = []
+            for subfield in field:
+                data = sample[subfield]
+                if isinstance(data, str):
+                    line = data
+                elif isinstance(data, list):
+                    line = "\n".join(data)
+                else:
+                    line = str(data)
+                out.append(line)
+            return {"text": "\n".join(out)}
+        for subfield in field:
+            cols.remove(subfield)
+        train_dataset = train_dataset.remove_columns(cols)
+        text_only_dataset = train_dataset.map(keep_field_only, num_proc=8)
+
+    return split_dataset(text_only_dataset)
+
+def get_raw_dataset(dataset_name, seed):
+    return load_plain_text(dataset_name, "text")
 
 def create_dataset(dataset_name, output_path, seed):
     raw_dataset = get_raw_dataset(dataset_name, seed)
