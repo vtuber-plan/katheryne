@@ -7,7 +7,6 @@ from transformers import (
     PreTrainedModel,
 )
 from huggingface_hub import snapshot_download
-from transformers.deepspeed import HfDeepSpeedConfig
 
 def create_hf_model(model_class,
                     model_name_or_path,

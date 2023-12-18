@@ -10,13 +10,27 @@ import torch
 from torch.utils.data import Dataset, Subset, ConcatDataset
 from torch.nn.utils.rnn import pad_sequence
 import torch.nn.functional as F
-from datasets import load_dataset
+from datasets import load_dataset, DatasetDict
 import numpy as np
 import os
 import hashlib
 from itertools import chain
 
 from tqdm import tqdm
+
+def split_dataset(dataset: Dataset):
+    # 90% train, 10% test + validation
+    train_testvalid = dataset.train_test_split(test_size=0.1)
+    # Split the 10% test + valid in half test, half valid
+    test_valid = train_testvalid['test'].train_test_split(test_size=0.5)
+    # gather everyone if you want to have a single DatasetDict
+    train_test_valid_dataset = DatasetDict({
+        'train': train_testvalid['train'],
+        'test': test_valid['test'],
+        'valid': test_valid['train']
+    })
+
+    return train_test_valid_dataset
 
 def get_shuffle_idx(seed, size):
     np_rng = np.random.RandomState(seed=seed)

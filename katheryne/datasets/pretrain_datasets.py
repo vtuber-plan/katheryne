@@ -16,20 +16,6 @@ from chatproto.registry import get_conv_settings
 from katheryne.utils.data.data_utils import get_shuffle_idx, get_subset
 
 
-def split_dataset(dataset):
-    # 90% train, 10% test + validation
-    train_testvalid = dataset.train_test_split(test_size=0.1)
-    # Split the 10% test + valid in half test, half valid
-    test_valid = train_testvalid['test'].train_test_split(test_size=0.5)
-    # gather everyone if you want to have a single DatasetDict
-    train_test_valid_dataset = datasets.DatasetDict({
-        'train': train_testvalid['train'],
-        'test': test_valid['test'],
-        'valid': test_valid['train']
-    })
-
-    return train_test_valid_dataset
-
 def load_plain_text(dataset_name, field, data_dir=None, data_files=None):
     raw_datasets = load_dataset(dataset_name, data_dir=data_dir, data_files=data_files)
     train_dataset = raw_datasets["train"]
