@@ -11,6 +11,7 @@ import datasets
 import torch
 from torch.utils.data import Dataset, Subset, ConcatDataset
 from tqdm import tqdm
+from katheryne.datasets.pretrain_dataset import PretrainDataset
 # from katheryne.data.datasets.pretrain_datasets import get_raw_dataset
 # from katheryne.data.datasets import PretrainDataset, PretrainUniformDataset
 
@@ -20,9 +21,9 @@ from katheryne.utils.utils import chunked
 
 from datasets import load_dataset
 
-def load_plain_text(dataset_name: str, field: Union[str, List[str]], data_dir=None, data_files=None):
+def load_plain_text(dataset_name: str, field: Union[str, List[str]], split:str="train", data_dir=None, data_files=None):
     raw_datasets = load_dataset(dataset_name, data_dir=data_dir, data_files=data_files)
-    train_dataset = raw_datasets["train"]
+    train_dataset = raw_datasets[split]
     cols = train_dataset.column_names
     if isinstance(field, str):
         def keep_field_only(sample):
@@ -54,10 +55,8 @@ def load_plain_text(dataset_name: str, field: Union[str, List[str]], data_dir=No
     return text_only_dataset
 
 def create_dataset(dataset_name, output_path, seed):
-    raw_dataset = load_plain_text(dataset_name, "text")
-
-    train_dataset = raw_dataset["train"]
-    eval_dataset = raw_dataset["valid"]
+    train_dataset = load_plain_text(dataset_name, "text", split="train")
+    eval_dataset = load_plain_text(dataset_name, "text", split="validation")
     return train_dataset, eval_dataset
 
 
