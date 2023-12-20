@@ -157,7 +157,7 @@ def create_dataset(dataset_name, output_path,
     eval_dataset = create_uniform_dataset(eval_dataset, raw_dataset, tokenizer, end_of_conversation_token, max_seq_len)
     return train_dataset, eval_dataset
 
-def create_supervised_finetuning_dataset(data_path, output_path, seed,
+def create_instruction_dataset(data_path, output_path, seed,
                             tokenizer, max_seq_len, end_of_conversation_token="<|endoftext|>"):
     """
     Creates the sft dataset

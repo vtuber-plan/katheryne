@@ -15,15 +15,15 @@ from katheryne.datasets.pretrain_dataset import PretrainDataset
 # from katheryne.data.datasets.pretrain_datasets import get_raw_dataset
 # from katheryne.data.datasets import PretrainDataset, PretrainUniformDataset
 
-from katheryne.utils.data.data_utils import get_shuffle_idx
+from katheryne.utils.data.data_utils import get_shuffle_idx, split_dataset
 from katheryne.utils.diskist import Diskist, extend_diskist, write_diskist
 from katheryne.utils.utils import chunked
 
 from datasets import load_dataset
 
 def load_plain_text(dataset_name: str, field: Union[str, List[str]], split:str="train", data_dir=None, data_files=None):
-    raw_datasets = load_dataset(dataset_name, data_dir=data_dir, data_files=data_files)
-    train_dataset = raw_datasets[split]
+    raw_datasets = load_dataset(dataset_name, split=split, data_dir=data_dir, data_files=data_files)
+    train_dataset = raw_datasets
     cols = train_dataset.column_names
     if isinstance(field, str):
         def keep_field_only(sample):
@@ -55,8 +55,30 @@ def load_plain_text(dataset_name: str, field: Union[str, List[str]], split:str="
     return text_only_dataset
 
 def create_dataset(dataset_name, output_path, seed):
-    train_dataset = load_plain_text(dataset_name, "text", split="train")
-    eval_dataset = load_plain_text(dataset_name, "text", split="validation")
+    raw_datasets = load_dataset(dataset_name)
+    if "train" in raw_datasets:
+        raw_train_dataset = load_plain_text(dataset_name, "text", split="train")
+    else:
+        raw_train_dataset = None
+    
+    if "validation" in raw_datasets:
+        raw_validation_dataset = load_plain_text(dataset_name, "text", split="validation")
+    elif "valid" in raw_datasets:
+        raw_validation_dataset = load_plain_text(dataset_name, "text", split="valid")
+    elif "eval" in raw_datasets:
+        raw_validation_dataset = load_plain_text(dataset_name, "text", split="eval")
+    elif "evaluation" in raw_datasets:
+        raw_validation_dataset = load_plain_text(dataset_name, "text", split="evaluation")
+    else:
+        raw_validation_dataset = None
+
+    if raw_validation_dataset is None:
+        train_test_valid_dataset = split_dataset(raw_train_dataset)
+        train_dataset = train_test_valid_dataset["train"]
+        eval_dataset = train_test_valid_dataset["valid"]
+    else:
+        train_dataset = raw_train_dataset
+        eval_dataset = raw_validation_dataset
     return train_dataset, eval_dataset
 
 
@@ -81,8 +103,10 @@ def create_pretrain_dataset(data_path: str, output_path: str, seed: int, tokeniz
         for d_path in data_path:
             print(f"Creating dataset: {d_path}")
             train_dataset, eval_dataset = create_dataset(d_path, output_path, seed)
-            train_datasets.append(train_dataset)
-            eval_datasets.append(eval_dataset)
+            if train_dataset is not None:
+                train_datasets.append(train_dataset)
+            if eval_dataset is not None:
+                eval_datasets.append(eval_dataset)
         
         train_dataset = datasets.concatenate_datasets(train_datasets)
         eval_dataset = datasets.concatenate_datasets(eval_datasets)

@@ -16,7 +16,7 @@ from katheryne.utils.model.model_utils import save_hf_format
 from katheryne.utils.module.lora import convert_lora_to_linear_layer, fuse_linear_layer, unfuse_linear_layer
 from katheryne.utils.utils import get_optimizer_grouped_parameters, optimizer_to, save_zero_three_model
 
-class SupervisedFinetuningLanguageModel(pl.LightningModule):
+class InstructionLanguageModel(pl.LightningModule):
     def __init__(self, model: PreTrainedModel, params: HParams) -> None:
         super().__init__()
         self.params = params

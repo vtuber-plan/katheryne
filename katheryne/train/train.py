@@ -64,7 +64,7 @@ def setup_lora(
         lora_alpha: int=8,
         lora_dropout: float=0.0,
         fan_in_fan_out: bool=False,
-        bias: str="None"
+        bias: str="none"
     ) -> PeftModel:
     # loftq_config = LoftQConfig(loftq_bits=4, ...)           # set 4bit quantization
     lora_config = LoraConfig(
@@ -76,6 +76,8 @@ def setup_lora(
         bias=bias,
     )
     model = get_peft_model(base_model, lora_config)
+    model.enable_input_require_grads()
+    model.print_trainable_parameters()
     return model
 
 def train(create_dataset, lightning_module_class):
@@ -113,15 +115,15 @@ def train(create_dataset, lightning_module_class):
     )
 
     # Setup LORA
-    if hparams.get("lora_dim", 0) > 0:
+    if "lora" in hparams:
         model = setup_lora(
             model,
-            r=hparams.get("r", 128),
-            target_modules=hparams.get("target_modules", 8),
-            lora_alpha=hparams.get("lora_alpha", 8),
-            lora_dropout=hparams.get("lora_dropout", 0.0),
-            fan_in_fan_out=hparams.get("fan_in_fan_out", False),
-            bias=hparams.get("bias", 'None')
+            r=hparams.lora.get("r", 128),
+            target_modules=hparams.lora.get("target_modules", []),
+            lora_alpha=hparams.lora.get("lora_alpha", 8),
+            lora_dropout=hparams.lora.get("lora_dropout", 0.0),
+            fan_in_fan_out=hparams.lora.get("fan_in_fan_out", False),
+            bias=hparams.lora.get("bias", 'none')
         )
     
     if hparams.get("gradient_checkpointing", False):

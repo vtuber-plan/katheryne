@@ -57,7 +57,7 @@ class PretrainLanguageModel(pl.LightningModule):
         loss = lm_output[0]
         
         # Logging to TensorBoard by default
-        self.log('train_loss', loss, on_step=True, on_epoch=True, sync_dist=False, rank_zero_only=True)
+        self.log('train_loss', loss, on_step=True, on_epoch=True, sync_dist=True, rank_zero_only=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -72,7 +72,7 @@ class PretrainLanguageModel(pl.LightningModule):
         lm_output = self.forward(tokens=source_tokens)
         loss = lm_output.loss
 
-        self.log('val_loss', loss, on_step=True, on_epoch=True, sync_dist=False, rank_zero_only=True)
+        self.log('val_loss', loss, on_step=True, on_epoch=True, sync_dist=True, rank_zero_only=True)
 
     def on_save_checkpoint(self, checkpoint):
         if self.hparams.params.get("lora_dim", 0) > 0:

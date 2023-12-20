@@ -14,6 +14,10 @@ def setup_strategy_fsdp(hparams, world_size, rank, devices):
     return fsdp
 
 def setup_strategy_deepspeed(hparams, world_size, rank, devices):
+    from lightning.pytorch.strategies import DeepSpeedStrategy
+    from katheryne.utils.ds_utils import get_train_ds_config
+
+    strategy_params = hparams.get("strategy_params", {})
     if world_size is None:
         ds_world_size = len(devices)
     else:
@@ -25,24 +29,22 @@ def setup_strategy_deepspeed(hparams, world_size, rank, devices):
         ds_precision = "bf16"
     else:
         ds_precision = "fp32"
-
-    from lightning.pytorch.strategies import DeepSpeedStrategy
-    from katheryne.utils.ds_utils import get_train_ds_config
     ds_config = get_train_ds_config(
-        offload=hparams.offload,
-        stage=hparams.zero_stage,
+        offload=strategy_params.get("offload", False),
+        stage=strategy_params.get("zero_stage", 2),
         precision=ds_precision
     )
+
     ds_config['train_micro_batch_size_per_gpu'] = hparams.per_device_train_batch_size
     ds_config['train_batch_size'] = hparams.per_device_train_batch_size * ds_world_size * hparams.accumulate_grad_batches
     ds = DeepSpeedStrategy(
         zero_optimization=True,
-        stage=hparams.zero_stage,
+        stage=strategy_params.get("zero_stage", 2),
         remote_device = hparams.get("remote_device", "cpu"),
-        offload_optimizer = hparams.offload,
+        offload_optimizer = strategy_params.get("offload", False),
         offload_optimizer_device = 'cpu',
-        offload_parameters = hparams.offload,
-        cpu_checkpointing = hparams.offload,
+        offload_parameters = strategy_params.get("offload", False),
+        cpu_checkpointing = strategy_params.get("offload", False),
         offload_params_device = "cpu",
         nvme_path=hparams.get("nvme_path", "./nvme_offload"),
         contiguous_memory_optimization=True,
