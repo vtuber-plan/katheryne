@@ -17,6 +17,7 @@ from katheryne.datasets.pretrain_dataset import PretrainDataset
 
 from katheryne.utils.data.data_utils import get_shuffle_idx, split_dataset
 from katheryne.utils.diskist import Diskist, extend_diskist, write_diskist
+from katheryne.utils.hparams import HParams
 from katheryne.utils.utils import chunked
 
 from datasets import load_dataset
@@ -82,7 +83,7 @@ def create_dataset(dataset_name, output_path, seed):
     return train_dataset, eval_dataset
 
 
-def create_pretrain_dataset(data_path: str, output_path: str, seed: int, tokenizer, max_seq_len: int):
+def create_pretrain_dataset(hparams: HParams, data_path: str, output_path: str, seed: int, tokenizer, max_seq_len: int):
     """
     Creates the pretrain dataset
     """

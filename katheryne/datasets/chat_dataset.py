@@ -15,14 +15,14 @@ from katheryne.utils.model.tokenizer_utils import get_text_offset
 IGNORE_TOKEN_ID = LabelSmoother.ignore_index
 
 class ChatDataset(Dataset):
-    def __init__(self, tokenizer: PreTrainedTokenizerBase, max_seq_len: int, dataset: datasets.Dataset, pad_token_id: int) -> None:
+    def __init__(self, tokenizer: PreTrainedTokenizerBase, max_seq_len: int, dataset: datasets.Dataset, pad_token_id: int, conv_format: str="openbuddy") -> None:
         super().__init__()
         self.tokenizer = tokenizer
         self.max_seq_len = max_seq_len
         self.dataset = dataset
         self.pad_token_id = pad_token_id
 
-        self.settings = get_conv_settings("openbuddy")
+        self.settings = get_conv_settings(conv_format)
         self.end_of_conversation = self.tokenizer.eos_token
 
     def __len__(self):
@@ -68,7 +68,7 @@ class ChatDataset(Dataset):
 
     def mask_label(self, prompt: str, target, indices):
         tokens = self.tokenizer.convert_ids_to_tokens(target, skip_special_tokens=True)
-        text_offset = get_text_offset(prompt, tokens)
+        text_offset = get_text_offset(self.tokenizer, prompt, tokens)
 
         cur_len = 1
         target[:cur_len] = IGNORE_TOKEN_ID

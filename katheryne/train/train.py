@@ -136,6 +136,7 @@ def train(create_dataset, lightning_module_class):
     # Prepare the data
     print("***** Prepare Dataset *****")
     train_dataset, valid_dataset = create_dataset(
+        hparams,
         hparams.data_path,
         hparams.data_output_path,
         args.seed,

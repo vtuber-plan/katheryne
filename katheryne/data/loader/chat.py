@@ -14,6 +14,7 @@ from katheryne.datasets.pretrain_dataset import PretrainDataset
 
 from katheryne.utils.data.data_utils import get_shuffle_idx, split_dataset
 from katheryne.utils.diskist import Diskist, extend_diskist, write_diskist
+from katheryne.utils.hparams import HParams
 from katheryne.utils.utils import chunked
 
 from datasets import load_dataset
@@ -60,10 +61,11 @@ def create_dataset(dataset_name, output_path, seed):
     return train_dataset, eval_dataset
 
 
-def create_chat_dataset(data_path: str, output_path: str, seed: int, tokenizer, max_seq_len: int):
+def create_chat_dataset(hparams: HParams, data_path: str, output_path: str, seed: int, tokenizer, max_seq_len: int):
     """
     Creates the chat dataset
     """
+    conv_format = hparams.get("conv_format", "openbuddy")
     os.makedirs(output_path, exist_ok=True)
     data_path_list = ("_".join(data_path)).replace("/", "_").replace("\\", "_")
     tokenizer_name = tokenizer.init_kwargs["name_or_path"].replace("/", "_")
@@ -95,6 +97,6 @@ def create_chat_dataset(data_path: str, output_path: str, seed: int, tokenizer, 
     # eval_dataset = datasets.load_from_disk(eval_fname)
 
     # torch.distributed.barrier()
-    train_dataset = ChatDataset(tokenizer, max_seq_len, train_dataset, tokenizer.pad_token_id)
-    eval_dataset = ChatDataset(tokenizer, max_seq_len, eval_dataset, tokenizer.pad_token_id)
+    train_dataset = ChatDataset(tokenizer, max_seq_len, train_dataset, tokenizer.pad_token_id, conv_format=conv_format)
+    eval_dataset = ChatDataset(tokenizer, max_seq_len, eval_dataset, tokenizer.pad_token_id, conv_format=conv_format)
     return train_dataset, eval_dataset
