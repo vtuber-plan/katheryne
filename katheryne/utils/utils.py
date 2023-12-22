@@ -178,3 +178,16 @@ def parse_dtype_str(dtype: str) -> torch.dtype:
     else:
         raise Exception("Unknown torch dtype.")
     return torch_dtype
+
+def searchsorted(arr, value):
+    left = 0
+    right = len(arr)
+
+    while left < right:
+        mid = (left + right) // 2
+        if arr[mid] < value:
+            left = mid + 1
+        else:
+            right = mid
+
+    return left

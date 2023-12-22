@@ -76,8 +76,6 @@ def setup_lora(
         bias=bias,
     )
     model = get_peft_model(base_model, lora_config)
-    model.enable_input_require_grads()
-    model.print_trainable_parameters()
     return model
 
 def train(create_dataset, lightning_module_class):
@@ -125,6 +123,9 @@ def train(create_dataset, lightning_module_class):
             fan_in_fan_out=hparams.lora.get("fan_in_fan_out", False),
             bias=hparams.lora.get("bias", 'none')
         )
+        if hparams.get("gradient_checkpointing", False):
+            model.enable_input_require_grads()
+        # model.print_trainable_parameters()
     
     if hparams.get("gradient_checkpointing", False):
         model.gradient_checkpointing_enable()
@@ -202,7 +203,9 @@ def train(create_dataset, lightning_module_class):
     trainer_params["precision"] = precision
 
     if "strategy" in hparams:
-        if hparams.strategy == "fsdp":
+        if hparams.strategy == None:
+            strategy = "auto"
+        elif hparams.strategy == "fsdp":
             strategy = setup_strategy_fsdp(hparams, world_size, rank, devices)
         elif hparams.strategy == "deepspeed":
             strategy = setup_strategy_deepspeed(hparams, world_size, rank, devices)
@@ -213,12 +216,13 @@ def train(create_dataset, lightning_module_class):
     elif len(devices) > 1:
         strategy = setup_strategy_ddp(hparams, world_size, rank, devices)
     else:
-        strategy = None
+        strategy = "auto"
     trainer_params["strategy"] = strategy
 
     trainer_params["max_epochs"] = hparams.get("max_epochs", 1000)
     trainer_params["accumulate_grad_batches"] = hparams.get("accumulate_grad_batches", 1)
     # profiler = AdvancedProfiler(filename="profile.txt")
+    # trainer_params["profiler"] = profiler
 
     # Other params
     if "trainer" in hparams and isinstance(hparams.trainer, dict):

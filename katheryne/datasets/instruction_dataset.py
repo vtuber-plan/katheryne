@@ -8,15 +8,14 @@ from transformers import PreTrainedTokenizerBase
 from transformers.trainer_pt_utils import LabelSmoother
 IGNORE_TOKEN_ID = LabelSmoother.ignore_index
 
-class PromptDataset(Dataset):
+class InstructionDataset(Dataset):
 
-    def __init__(self, tokenizer: PreTrainedTokenizerBase, max_seq_len: int, dataset: PromptUniformDataset, pad_token_id: int, train_phase: int) -> None:
+    def __init__(self, tokenizer: PreTrainedTokenizerBase, max_seq_len: int, dataset: PromptUniformDataset, pad_token_id: int) -> None:
         super().__init__()
         self.tokenizer = tokenizer
         self.max_seq_len = max_seq_len
         self.dataset = dataset
         self.pad_token_id = pad_token_id
-        self.train_phase = train_phase
 
     def __len__(self):
         return len(self.dataset)

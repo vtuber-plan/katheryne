@@ -15,7 +15,7 @@ from katheryne.utils.hparams import HParams
 from katheryne.utils.model.model_utils import save_hf_format
 from katheryne.utils.utils import get_optimizer_grouped_parameters, optimizer_to, save_zero_three_model
 
-class InstructionLanguageModel(pl.LightningModule):
+class ChatLanguageModel(pl.LightningModule):
     def __init__(self, model: PreTrainedModel, params: HParams) -> None:
         super().__init__()
         self.params = params
@@ -75,9 +75,6 @@ class InstructionLanguageModel(pl.LightningModule):
         self.log('val_loss', loss, on_step=True, on_epoch=True, sync_dist=True, rank_zero_only=True)
 
     def on_save_checkpoint(self, checkpoint):
-        if self.hparams.params.get("lora_dim", 0) > 0:
-            fuse_linear_layer(self.model, self.deepspeed)
-
         if self.deepspeed and self.hparams.params.get("zero_stage", 0) == 3:
             # For zero stage 3, each gpu only has a part of the model, so we need a special save function
             save_zero_three_model(self.model, self.global_rank, 
@@ -92,9 +89,7 @@ class InstructionLanguageModel(pl.LightningModule):
                     output_dir="./lightning_logs/huggingface_format",
                     sub_folder=f"checkpoint-step-{self.global_step}"
                 )
-        if self.hparams.params.get("lora_dim", 0) > 0:
-            unfuse_linear_layer(self.model, self.deepspeed)
-        
+
     def configure_optimizers(self):
         optimizer_grouped_parameters = get_optimizer_grouped_parameters(self.trainer.model, self.hparams.params.get("weight_decay", 0.0))
         if self.deepspeed:

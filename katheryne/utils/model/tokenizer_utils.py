@@ -1,7 +1,8 @@
 
 import os
 import json
-from transformers import AutoTokenizer, PreTrainedTokenizer
+from typing import List
+from transformers import AutoTokenizer, PreTrainedTokenizer, PreTrainedTokenizerBase
 
 def load_hf_tokenizer(model_name_or_path, fast_tokenizer=True, trust_remote_code=True, padding_side="left"):
     if "open_llama" in model_name_or_path:
@@ -32,3 +33,33 @@ def pad_tokenizer(tokenizer: PreTrainedTokenizer, pad_to: int=64) -> PreTrainedT
     padded_vocab_len = ((current_vocab_len // pad_to) + 1) * pad_to
     add_token_num = padded_vocab_len - current_vocab_len
     tokenizer.add_tokens([f"TOKENIZER_PAD_TOKEN_{i}" for i in range(add_token_num)])
+
+def get_text_offset(tokenizer: PreTrainedTokenizerBase, text: str, tokens: List[str]):
+    if tokenizer.is_fast:
+        text_offset = [-1] * len(tokens)
+        batch_encoding = tokenizer([text])
+        for token_i in range(len(tokens)):
+            span = batch_encoding.token_to_chars(0, token_i)
+            if span is None:
+                continue
+            start, end = span
+            text_offset[token_i] = start
+    else:
+        text_offset = []
+        for token_i in range(0, len(tokens)):
+            if token_i == 0:
+                text_offset.append(-1)
+                continue
+            prefix_text = tokenizer.convert_tokens_to_string(tokens[:token_i])
+            if text.startswith(prefix_text):
+                text_offset.append(len(prefix_text))
+            else:
+                text_offset.append(-1)
+        
+        last_id = len(text)
+        for token_i in reversed(range(0, len(tokens))):
+            if text_offset[token_i] == -1:
+                text_offset[token_i] = last_id
+            else:
+                last_id = text_offset[token_i]
+    return text_offset
