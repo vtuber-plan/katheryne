@@ -54,9 +54,9 @@ class ChatLanguageModel(pl.LightningModule):
 
         lm_output = self.forward(tokens=source_tokens)
         loss = lm_output[0]
-        
+
         # Logging to TensorBoard by default
-        self.log('train_loss', loss, on_step=True, on_epoch=True, sync_dist=True, rank_zero_only=True)
+        self.log('train_loss', loss, on_step=True, on_epoch=True, sync_dist=False)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -72,8 +72,9 @@ class ChatLanguageModel(pl.LightningModule):
         lm_output = self.forward(tokens=source_tokens)
         loss = lm_output.loss
 
-        self.log('val_loss', loss, on_step=True, on_epoch=True, sync_dist=True, rank_zero_only=True)
+        self.log('val_loss', loss, on_step=True, on_epoch=True, sync_dist=False)
 
+    """
     def on_save_checkpoint(self, checkpoint):
         if self.deepspeed and self.hparams.params.get("zero_stage", 0) == 3:
             # For zero stage 3, each gpu only has a part of the model, so we need a special save function
@@ -89,6 +90,7 @@ class ChatLanguageModel(pl.LightningModule):
                     output_dir="./lightning_logs/huggingface_format",
                     sub_folder=f"checkpoint-step-{self.global_step}"
                 )
+    """
 
     def configure_optimizers(self):
         optimizer_grouped_parameters = get_optimizer_grouped_parameters(self.trainer.model, self.hparams.params.get("weight_decay", 0.0))

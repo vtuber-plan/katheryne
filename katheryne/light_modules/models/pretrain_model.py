@@ -49,15 +49,15 @@ class PretrainLanguageModel(pl.LightningModule):
 
         batch_size = input_ids.shape[0]
         source_tokens = {
-            'input_ids': input_ids[..., :-1],
-            'attention_mask': input_mask[..., :-1]
+            'input_ids': input_ids,
+            'attention_mask': input_mask
         }
 
         lm_output = self.forward(tokens=source_tokens)
         loss = lm_output[0]
-        
+
         # Logging to TensorBoard by default
-        self.log('train_loss', loss, on_step=True, on_epoch=True, sync_dist=True, rank_zero_only=True)
+        self.log('train_loss', loss, on_step=True, on_epoch=True, sync_dist=False)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -65,19 +65,17 @@ class PretrainLanguageModel(pl.LightningModule):
 
         batch_size = input_ids.shape[0]
         source_tokens = {
-            'input_ids': input_ids[..., :-1],
-            'attention_mask': input_mask[..., :-1]
+            'input_ids': input_ids,
+            'attention_mask': input_mask
         }
 
         lm_output = self.forward(tokens=source_tokens)
         loss = lm_output.loss
 
-        self.log('val_loss', loss, on_step=True, on_epoch=True, sync_dist=True, rank_zero_only=True)
+        self.log('val_loss', loss, on_step=True, on_epoch=True, sync_dist=False)
 
+    """
     def on_save_checkpoint(self, checkpoint):
-        if self.hparams.params.get("lora_dim", 0) > 0:
-            fuse_linear_layer(self.model, self.deepspeed)
-
         if self.deepspeed and self.hparams.params.get("zero_stage", 0) == 3:
             # For zero stage 3, each gpu only has a part of the model, so we need a special save function
             save_zero_three_model(self.model, self.global_rank, 
@@ -92,8 +90,7 @@ class PretrainLanguageModel(pl.LightningModule):
                     output_dir="./lightning_logs/huggingface_format",
                     sub_folder=f"checkpoint-step-{self.global_step}"
                 )
-        if self.hparams.params.get("lora_dim", 0) > 0:
-            unfuse_linear_layer(self.model, self.deepspeed)
+    """
     
     def configure_optimizers(self):
         if self.deepspeed:

@@ -47,7 +47,7 @@ from transformers import (
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Pretrain a transformers model on a causal language modeling task")
-    parser.add_argument('--hparams', type=str, default="hparams/hparams_llama2_7b_ddp_lora.json", help='The hparam file of training')
+    parser.add_argument('--hparams', type=str, default="hparams/hparams_pretrain_llama2_7b_ddp_lora.json", help='The hparam file of training')
     parser.add_argument('--accelerator', type=str, default="gpu", help='training device')
     parser.add_argument('--device', type=str, default="", help='training device ids')
     parser.add_argument('--checkpoint', type=str, default="checkpoints/", help='checkpoint path')
@@ -79,6 +79,7 @@ def setup_lora(
     return model
 
 def train(create_dataset, lightning_module_class):
+    torch.autograd.set_detect_anomaly(True)
     args = parse_args()
     hparams = HParams.from_json_file(args.hparams)
     master_port = os.environ.get("MASTER_PORT", None)
@@ -201,6 +202,9 @@ def train(create_dataset, lightning_module_class):
         print("using bf16")
         precision = "bf16-mixed"
         assert (args.accelerator not in ["cpu"]), "models in bfloat16 cannot run with the accelerator CPU."
+    else:
+        print("using fp32")
+        precision = 32
     trainer_params["precision"] = precision
 
     if "strategy" in hparams:
@@ -220,10 +224,22 @@ def train(create_dataset, lightning_module_class):
         strategy = "auto"
     trainer_params["strategy"] = strategy
 
+    # gradient clip
+    trainer_params["gradient_clip_algorithm"] = hparams.get("gradient_clip_algorithm", "norm")
+    trainer_params["gradient_clip_val"] = hparams.get("gradient_clip_val", None)
+
     trainer_params["max_epochs"] = hparams.get("max_epochs", 1000)
     trainer_params["accumulate_grad_batches"] = hparams.get("accumulate_grad_batches", 1)
-    # profiler = AdvancedProfiler(filename="profile.txt")
-    # trainer_params["profiler"] = profiler
+
+    if "advanced_profiler" in hparams:
+        profiler = AdvancedProfiler(**hparams.advanced_profiler)
+        trainer_params["profiler"] = profiler
+    elif "simple_profiler" in hparams:
+        profiler = SimpleProfiler(**hparams.simple_profiler)
+        trainer_params["profiler"] = profiler
+
+    # detect_anomaly
+    trainer_params["detect_anomaly"] = hparams.get("detect_anomaly", False)
 
     # Other params
     if "trainer" in hparams and isinstance(hparams.trainer, dict):
