@@ -2,7 +2,7 @@
 import hashlib
 import os
 import shutil
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 import numpy as np
 
 import datasets
@@ -33,7 +33,7 @@ def load_chat_messages(dataset_name: str, field: Union[str, List[str]], split:st
 
     return messages_only_dataset
 
-def create_dataset(dataset_name, output_path, seed):
+def create_dataset(dataset_name, output_path, seed) -> Tuple[datasets.Dataset, datasets.Dataset]:
     raw_datasets = load_dataset(dataset_name)
     if "train" in raw_datasets:
         raw_train_dataset = load_chat_messages(dataset_name, "messages", split="train")
@@ -77,12 +77,20 @@ def create_chat_dataset(hparams: HParams, data_path: str, output_path: str, seed
 
     cache_found = os.path.isdir(train_fname) and os.path.isdir(eval_fname)
 
+    CHAT_FEATURES = datasets.Features({'messages': [{
+        'role': datasets.Value(dtype='string', id=None),
+        'content': datasets.Value(dtype='string', id=None)
+        }]
+    })
     if not cache_found:
         train_datasets = []
         eval_datasets = []
-        for d_path in data_path:
+        for di, d_path in enumerate(data_path):
             print(f"Creating dataset: {d_path}")
             train_dataset, eval_dataset = create_dataset(d_path, output_path, seed)
+            train_dataset = train_dataset.cast(CHAT_FEATURES)
+            eval_dataset = eval_dataset.cast(CHAT_FEATURES)
+
             if train_dataset is not None:
                 train_datasets.append(train_dataset)
             if eval_dataset is not None:

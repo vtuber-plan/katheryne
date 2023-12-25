@@ -130,7 +130,7 @@ def save_zero_three_model(model_ema, global_rank: int, save_dir: str, zero_stage
                     v_p = v.data.cpu()
             else:
                 v_p = v.cpu()
-            if global_rank == 0 and "lora" not in k:
+            if global_rank == 0:
                 output_state_dict[k] = v_p
         if global_rank == 0:
             torch.save(output_state_dict, output_model_file)

@@ -110,7 +110,8 @@ def train(create_dataset, lightning_module_class):
         model_name_or_path=hparams.model_name_or_path,
         tokenizer=tokenizer,
         dtype=torch_dtype,
-        disable_dropout=hparams.disable_dropout
+        disable_dropout=hparams.disable_dropout,
+        use_flash_atten=hparams.get("flash_attention_2", False),
     )
 
     # Setup LORA
@@ -132,7 +133,7 @@ def train(create_dataset, lightning_module_class):
         model.gradient_checkpointing_enable()
     
     # Save Model
-    # save_hf_format(model, tokenizer, "./lightning_logs", "huggingface_format")
+    save_hf_format(model, tokenizer, "./lightning_logs/huggingface_format", sub_folder=f"checkpoint-step-0")
     
     # Prepare the data
     print("***** Prepare Dataset *****")
@@ -165,7 +166,8 @@ def train(create_dataset, lightning_module_class):
         checkpoint_every_n_train_steps = hparams.checkpoint_every_n_train_steps
     
     checkpoint_callback = ModelCheckpoint(
-        dirpath=None, save_last=True, every_n_train_steps=checkpoint_every_n_train_steps, save_weights_only=False, save_on_train_epoch_end=True
+        dirpath=None, save_last=True, every_n_train_steps=checkpoint_every_n_train_steps,
+        save_weights_only=False, save_on_train_epoch_end=True, save_top_k=-1
     )
 
     # Earlystop Settings
