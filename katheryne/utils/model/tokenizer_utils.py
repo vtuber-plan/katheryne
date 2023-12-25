@@ -16,7 +16,10 @@ def load_hf_tokenizer(model_name_or_path, fast_tokenizer=True, trust_remote_code
                 model_name = model_json_file["_name_or_path"]
             else:
                 model_name = model_name_or_path
-            tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=fast_tokenizer, trust_remote_code=trust_remote_code, padding_side=padding_side)
+            if os.path.exists(model_name):
+                tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=fast_tokenizer, trust_remote_code=trust_remote_code, padding_side=padding_side)
+            else:
+                tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, use_fast=fast_tokenizer, trust_remote_code=trust_remote_code, padding_side=padding_side)
     else:
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, use_fast=fast_tokenizer, trust_remote_code=trust_remote_code, padding_side=padding_side)
     

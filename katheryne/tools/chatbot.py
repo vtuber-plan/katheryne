@@ -6,6 +6,7 @@
 import argparse
 import re
 import logging
+from typing import Any
 import transformers  # noqa: F401
 import os
 import json
@@ -15,6 +16,19 @@ from transformers import AutoConfig, OPTForCausalLM, AutoModelForCausalLM, AutoT
 from chatproto.conversation.history import ConversationHistory
 from chatproto.registry import get_conv_settings
 
+class ChatPipeline(object):
+    def __init__(self, model, tokenizer, device) -> None:
+        self.model = model
+        self.model.to(device)
+        self.tokenizer = tokenizer
+        self.device = device
+
+    def __call__(self, input_text: str, max_new_tokens: int=256) -> Any:
+        input_ids = self.tokenizer([input_text], return_tensors="pt", padding='longest', max_length=2048, truncation=True)["input_ids"].to(self.device)
+        outputs_ids = self.model.generate(inputs=input_ids, max_new_tokens=max_new_tokens, pad_token_id=self.tokenizer.eos_token_id)
+        outputs = self.tokenizer.batch_decode(outputs_ids, skip_special_tokens=True)
+        output_text = [{"generated_text": each_text} for each_text in outputs]
+        return output_text
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -31,7 +45,10 @@ def load_local_tokenizer(path: str):
     if os.path.exists(model_json):
         model_json_file = json.load(open(model_json))
         model_name = model_json_file["_name_or_path"]
-        tokenizer = AutoTokenizer.from_pretrained(model_name, fast_tokenizer=True)
+        if os.path.exists(model_name):
+            tokenizer = AutoTokenizer.from_pretrained(model_name, fast_tokenizer=True)
+        else:
+            tokenizer = AutoTokenizer.from_pretrained(path, fast_tokenizer=True)
     elif os.path.exists(adapter_model_json):
         model_json_file = json.load(open(adapter_model_json))
         model_name = model_json_file["base_model_name_or_path"]
@@ -78,7 +95,8 @@ def get_generator(path, settings):
     # model.config.end_token_id = tokenizer.eos_token_id
     # model.config.pad_token_id = model.config.eos_token_id
     # model.resize_token_embeddings(len(tokenizer))
-    generator = pipeline("text-generation", model=model, tokenizer=tokenizer, device="cuda", eos_token_id=tokenizer.eos_token_id)
+    # generator = pipeline("text-generation", model=model, tokenizer=tokenizer, device="cuda", eos_token_id=tokenizer.eos_token_id)
+    generator = ChatPipeline(model=model, tokenizer=tokenizer, device="cuda")
     return generator
 
 
@@ -142,7 +160,6 @@ Buddy possesses vast knowledge about the world, history, and culture."""
             continue
 
         prompt = history.get_prompt()
-
         response = get_model_response(generator, prompt, args.max_new_tokens)[0]['generated_text']
         response = response[len(prompt):]
         output = stop_response(response)
