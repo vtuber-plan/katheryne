@@ -37,7 +37,7 @@ class ChatDataset(Dataset):
                     )
         return encoded_text
     
-    def get_prompt(self, messages):
+    def get_prompt(self, messages, ignore_last:bool=False):
         system = ""
         for i, item in enumerate(messages):
             role, content = item["role"], item["content"]
@@ -55,7 +55,7 @@ class ChatDataset(Dataset):
             role, content = item["role"], item["content"]
             if role == "system":
                 continue
-            if i == len(messages) - 1:
+            if ignore_last and i == len(messages) - 1:
                 content = None
             if role.lower() == "user":
                 real_role = self.settings.roles[0]
