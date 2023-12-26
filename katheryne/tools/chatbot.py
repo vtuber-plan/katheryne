@@ -25,7 +25,8 @@ class ChatPipeline(object):
 
     def __call__(self, input_text: str, max_new_tokens: int=256) -> Any:
         input_ids = self.tokenizer([input_text], return_tensors="pt", padding='longest', max_length=2048, truncation=True)["input_ids"].to(self.device)
-        outputs_ids = self.model.generate(inputs=input_ids, max_new_tokens=max_new_tokens, pad_token_id=self.tokenizer.eos_token_id)
+        outputs_ids = self.model.generate(inputs=input_ids, max_new_tokens=max_new_tokens,
+                                          eos_token_id=self.tokenizer.eos_token_id, pad_token_id=self.tokenizer.eos_token_id)
         outputs = self.tokenizer.batch_decode(outputs_ids, skip_special_tokens=True)
         output_text = [{"generated_text": each_text} for each_text in outputs]
         return output_text

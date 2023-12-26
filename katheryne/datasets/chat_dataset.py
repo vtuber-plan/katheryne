@@ -1,3 +1,4 @@
+from typing import Optional, Union
 import numpy as np
 import torch
 import datasets
@@ -15,7 +16,9 @@ from katheryne.utils.model.tokenizer_utils import get_text_offset
 IGNORE_TOKEN_ID = LabelSmoother.ignore_index
 
 class ChatDataset(Dataset):
-    def __init__(self, tokenizer: PreTrainedTokenizerBase, max_seq_len: int, dataset: datasets.Dataset, pad_token_id: int, conv_format: str="openbuddy") -> None:
+    def __init__(self, tokenizer: PreTrainedTokenizerBase, max_seq_len: int,
+                 dataset: datasets.Dataset, pad_token_id: int, conv_format: str="openbuddy",
+                 end_of_conversation: Optional[Union[str, int]]=None) -> None:
         super().__init__()
         self.tokenizer = tokenizer
         self.max_seq_len = max_seq_len
@@ -23,7 +26,10 @@ class ChatDataset(Dataset):
         self.pad_token_id = pad_token_id
 
         self.settings = get_conv_settings(conv_format)
-        self.end_of_conversation = self.tokenizer.eos_token
+        if end_of_conversation is None:
+            self.end_of_conversation = self.tokenizer.eos_token_id
+        else:
+            self.end_of_conversation = end_of_conversation
 
     def __len__(self):
         return len(self.dataset)
@@ -85,7 +91,12 @@ class ChatDataset(Dataset):
             target[cur_len:start] = IGNORE_TOKEN_ID
             cur_len = end
 
-        end_conv = np.searchsorted(text_offset, len(prompt)-len(self.end_of_conversation))
+        if isinstance(self.end_of_conversation, str):
+            end_conv = np.searchsorted(text_offset, len(prompt)-len(self.end_of_conversation))
+        elif isinstance(self.end_of_conversation, int):
+            end_conv = np.searchsorted(text_offset, len(prompt)-1)
+        else:
+             raise Exception(f"Type of end_of_conversation is {type(self.end_of_conversation)}, which is not supported.")
         target[end_conv:end] = IGNORE_TOKEN_ID
         if False:  # Inspect and check the correctness of masking
             z = target.clone()
@@ -100,15 +111,30 @@ class ChatDataset(Dataset):
 
         messages = sample["messages"]
         prompt, indices = self.get_prompt(messages)
-        prompt += self.end_of_conversation
+        if isinstance(self.end_of_conversation, str):
+            prompt += self.end_of_conversation
 
         encoded_text = self.tokenize(prompt)
-        labels = encoded_text["input_ids"].squeeze(0).clone()
+
+        input_ids = encoded_text["input_ids"].squeeze(0)
+        attention_mask = encoded_text["attention_mask"].squeeze(0)
+
+        if isinstance(self.end_of_conversation, int):
+            input_ids = torch.cat((
+                    input_ids,
+                    torch.tensor([self.end_of_conversation], dtype=torch.long, device=input_ids.device)
+                ), dim=0)
+            attention_mask = torch.cat((
+                attention_mask,
+                torch.tensor([1], dtype=torch.long, device=attention_mask.device)
+                ), dim=0)
+    
+        labels = input_ids.clone()
         labels = self.mask_label(prompt, labels, indices)
         # TODO: labels pad上IGNORE_TOKEN_ID
         # labels[:len(encoded_prompt) + 1] = IGNORE_TOKEN_ID # 这里不 + 1抵消bos，是因为可能最后一个token是空格，和回答的第一个token合在一起
         return {
-            "input_ids": encoded_text["input_ids"].squeeze(0),
-            "attention_mask": encoded_text["attention_mask"].squeeze(0),
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
             "labels": labels
         }
