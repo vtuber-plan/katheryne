@@ -11,7 +11,7 @@ from transformers.trainer_pt_utils import LabelSmoother
 from chatproto.conversation.history import ConversationHistory
 from chatproto.registry import get_conv_settings
 
-from katheryne.utils.model.tokenizer_utils import get_text_offset
+from katheryne.utils.model.tokenizer_utils import get_text_offset, is_merge_prefix_space
 
 IGNORE_TOKEN_ID = LabelSmoother.ignore_index
 
@@ -33,6 +33,8 @@ class ChatDataset(Dataset):
                 self.end_of_conversation = self.tokenizer.eos_token_id
         else:
             self.end_of_conversation = end_of_conversation
+        
+        self.skip_space = is_merge_prefix_space(self.tokenizer)
 
     def __len__(self):
         return len(self.dataset)
@@ -87,10 +89,10 @@ class ChatDataset(Dataset):
             if i % 2 == 0:
                 continue
             text_start, text_end = turn
-            if prompt[text_start - 1] == " ":
+            if prompt[text_start - 1] == " " and self.skip_space:
                 text_start -= 1
-            start = np.searchsorted(text_offset, text_start)
-            end = np.searchsorted(text_offset, text_end)
+            start = np.searchsorted(text_offset, text_start, side="left")
+            end = np.searchsorted(text_offset, text_end, side="left")
             target[cur_len:start] = IGNORE_TOKEN_ID
             cur_len = end
 

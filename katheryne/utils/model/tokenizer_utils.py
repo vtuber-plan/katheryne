@@ -69,3 +69,8 @@ def get_text_offset(tokenizer: PreTrainedTokenizerBase, text: str, tokens: List[
             else:
                 last_id = text_offset[token_i]
     return text_offset
+
+def is_merge_prefix_space(tokenizer: PreTrainedTokenizerBase) -> bool:
+    lhs = tokenizer(": a", add_special_tokens=False)['input_ids']
+    rhs = tokenizer(": ", add_special_tokens=False)['input_ids']
+    return len(lhs) == len(rhs)
