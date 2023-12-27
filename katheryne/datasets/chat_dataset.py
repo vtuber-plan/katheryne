@@ -27,7 +27,10 @@ class ChatDataset(Dataset):
 
         self.settings = get_conv_settings(conv_format)
         if end_of_conversation is None:
-            self.end_of_conversation = self.tokenizer.eos_token_id
+            if self.tokenizer.eos_token_id is None:
+                self.end_of_conversation = self.tokenizer.pad_token_id
+            else:
+                self.end_of_conversation = self.tokenizer.eos_token_id
         else:
             self.end_of_conversation = end_of_conversation
 
@@ -100,10 +103,14 @@ class ChatDataset(Dataset):
         target[end_conv:end] = IGNORE_TOKEN_ID
         if False:  # Inspect and check the correctness of masking
             z = target.clone()
-            z = torch.where(z == IGNORE_TOKEN_ID, self.tokenizer.unk_token_id, z)
+            if self.tokenizer.unk_token_id is not None:
+                z = torch.where(z == IGNORE_TOKEN_ID, self.tokenizer.unk_token_id, z)
+            else:
+                z = torch.where(z == IGNORE_TOKEN_ID, 0, z)
             print(prompt)
             print("================")
             print(self.tokenizer.decode(z))
+            exit()
         return target
 
     def __getitem__(self, idx):

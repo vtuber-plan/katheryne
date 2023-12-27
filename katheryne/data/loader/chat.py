@@ -105,6 +105,18 @@ def create_chat_dataset(hparams: HParams, data_path: str, output_path: str, seed
     # eval_dataset = datasets.load_from_disk(eval_fname)
 
     # torch.distributed.barrier()
-    train_dataset = ChatDataset(tokenizer, max_seq_len, train_dataset, tokenizer.pad_token_id, conv_format=conv_format)
-    eval_dataset = ChatDataset(tokenizer, max_seq_len, eval_dataset, tokenizer.pad_token_id, conv_format=conv_format)
+    train_dataset = ChatDataset(tokenizer, 
+        max_seq_len, 
+        train_dataset, 
+        tokenizer.pad_token_id, 
+        conv_format=conv_format, 
+        end_of_conversation=hparams.get("end_of_conversation", None)
+    )
+    eval_dataset = ChatDataset(tokenizer, 
+        max_seq_len, 
+        eval_dataset, 
+        tokenizer.pad_token_id, 
+        conv_format=conv_format, 
+        end_of_conversation=hparams.get("end_of_conversation", None)
+    )
     return train_dataset, eval_dataset

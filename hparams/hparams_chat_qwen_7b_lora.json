@@ -1,5 +1,6 @@
 {
     "conv_format": "qwen",
+    "end_of_conversation": 151643,
     "data_path": [
         "Vtuber-plan/sharegpt-cleaned"
     ],
@@ -31,6 +32,6 @@
     "strategy": null,
     "lora": {
         "r": 128,
-        "target_modules": ["q_proj", "v_proj"]
+        "target_modules": ["c_attn"]
     }
 }
