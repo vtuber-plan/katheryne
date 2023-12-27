@@ -25,8 +25,11 @@ def load_hf_tokenizer(model_name_or_path, fast_tokenizer=True, trust_remote_code
     
     print(f"Tokenizer {model_name_or_path} is_fast: ", tokenizer.is_fast)
     if tokenizer._pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-        print(f"Tokenizer {model_name_or_path} pad_token missing, use eos_token instead.")
+        try:
+            tokenizer.pad_token = tokenizer.eos_token
+            print(f"Tokenizer {model_name_or_path} pad_token missing, use eos_token instead.")
+        except AttributeError as e:
+            print(f"Failed to set the eos_token of tokenizer {model_name_or_path}")
     return tokenizer
 
 def pad_tokenizer(tokenizer: PreTrainedTokenizer, pad_to: int=64) -> PreTrainedTokenizer:
