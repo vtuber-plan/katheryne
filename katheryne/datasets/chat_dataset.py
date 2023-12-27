@@ -123,21 +123,35 @@ class ChatDataset(Dataset):
         if isinstance(self.end_of_conversation, str):
             prompt += self.end_of_conversation
 
-        encoded_text = self.tokenize(prompt)
+        encoded_text = self.tokenize(prompt, add_special_tokens=True)
 
         input_ids = encoded_text["input_ids"].squeeze(0)
         attention_mask = encoded_text["attention_mask"].squeeze(0)
 
         if isinstance(self.end_of_conversation, int):
-            input_ids = torch.cat((
-                    input_ids,
-                    torch.tensor([self.end_of_conversation], dtype=torch.long, device=input_ids.device)
-                ), dim=0)
-            attention_mask = torch.cat((
-                attention_mask,
-                torch.tensor([1], dtype=torch.long, device=attention_mask.device)
-                ), dim=0)
-    
+            last_token_id = input_ids[-1]
+            if last_token_id == self.tokenizer.eos_token_id:
+                if self.end_of_conversation != self.tokenizer.eos_token_id:
+                    input_ids[-1] = self.end_of_conversation
+                    input_ids = torch.cat((
+                            input_ids,
+                            torch.tensor([self.tokenizer.eos_token_id], dtype=torch.long, device=input_ids.device)
+                        ), dim=0)
+                    attention_mask = torch.cat((
+                        attention_mask,
+                        torch.tensor([1], dtype=torch.long, device=attention_mask.device)
+                        ), dim=0)
+            else:
+                input_ids = torch.cat((
+                        input_ids,
+                        torch.tensor([self.end_of_conversation], dtype=torch.long, device=input_ids.device)
+                    ), dim=0)
+                attention_mask = torch.cat((
+                    attention_mask,
+                    torch.tensor([1], dtype=torch.long, device=attention_mask.device)
+                    ), dim=0)
+
+        
         labels = input_ids.clone()
         labels = self.mask_label(prompt, labels, indices)
         # TODO: labels pad上IGNORE_TOKEN_ID

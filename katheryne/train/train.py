@@ -47,7 +47,7 @@ from transformers import (
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Pretrain a transformers model on a causal language modeling task")
-    parser.add_argument('--hparams', type=str, default="hparams/hparams_pretrain_llama2_7b_ddp_lora.json", help='The hparam file of training')
+    parser.add_argument('--hparams', type=str, default="hparams/hparams_chat_deepseek_7b_lora.json", help='The hparam file of training')
     parser.add_argument('--accelerator', type=str, default="gpu", help='training device')
     parser.add_argument('--device', type=str, default="", help='training device ids')
     parser.add_argument('--checkpoint', type=str, default="checkpoints/", help='checkpoint path')

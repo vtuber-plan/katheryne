@@ -7,6 +7,7 @@ from torch.nn import functional as F
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.distributed.fsdp import FullStateDictConfig, StateDictType
 
+import transformers
 from transformers import PreTrainedModel, get_scheduler
 
 import lightning.pytorch as pl
@@ -99,6 +100,13 @@ class ChatLanguageModel(pl.LightningModule):
                 optimizer_grouped_parameters,
                 lr=self.hparams.params.learning_rate,
                 betas=self.hparams.params.betas,
+                eps=self.hparams.params.eps
+            )
+        elif self.params.get("transformer_adamw", False):
+            self.optim = transformers.AdamW(
+                params=optimizer_grouped_parameters, 
+                lr=self.hparams.params.learning_rate, 
+                betas=self.hparams.params.betas, 
                 eps=self.hparams.params.eps
             )
         else:

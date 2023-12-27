@@ -1,12 +1,14 @@
 {
-    "conv_format": "openbuddy",
+    "detect_anomaly": true,
+    "conv_format": "deepseek",
     "data_path": [
         "Vtuber-plan/sharegpt-cleaned"
     ],
     "data_output_path": "./tmp/data_files/",
-    "model_name_or_path": "OpenBuddy/openbuddy-deepseek-67b-v15.2",
+    "model_name_or_path": "deepseek-ai/deepseek-llm-7b-base",
     "flash_attention_2": false,
-    "per_device_train_batch_size": 8,
+    "transformer_adamw": true,
+    "per_device_train_batch_size": 2,
     "per_device_eval_batch_size": 8,
     "accumulate_grad_batches": 8,
     "max_seq_len": 2048,
@@ -15,7 +17,7 @@
     "val_check_interval": 0.25,
     "limit_val_batches": 0.1,
     "learning_rate": 3e-5,
-    "betas": [0.9, 0.95],
+    "betas": [0.9, 0.999],
     "eps": 1e-6,
     "lr_decay": 0.999875,
     "lr_scheduler_type": "cosine",
@@ -28,9 +30,5 @@
     "weight_decay": 0.0,
     "gradient_clip_algorithm": "norm",
     "gradient_clip_val": 1.0,
-    "strategy": null,
-    "lora": {
-        "r": 128,
-        "target_modules": ["q_proj", "v_proj"]
-    }
+    "strategy": null
 }
