@@ -4,7 +4,7 @@ import json
 from typing import List
 from transformers import AutoTokenizer, PreTrainedTokenizer, PreTrainedTokenizerBase
 
-def load_hf_tokenizer(model_name_or_path, fast_tokenizer=True, trust_remote_code=True, padding_side="left"):
+def load_hf_tokenizer(model_name_or_path, fast_tokenizer=True, trust_remote_code=True, padding_side="right"):
     if "open_llama" in model_name_or_path:
         fast_tokenizer = False
     if os.path.exists(model_name_or_path):
@@ -23,11 +23,16 @@ def load_hf_tokenizer(model_name_or_path, fast_tokenizer=True, trust_remote_code
     else:
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, use_fast=fast_tokenizer, trust_remote_code=trust_remote_code, padding_side=padding_side)
     
+    tokenizer.padding_side = padding_side
     print(f"Tokenizer {model_name_or_path} is_fast: ", tokenizer.is_fast)
     if tokenizer._pad_token is None:
         try:
-            tokenizer.pad_token = tokenizer.eos_token
-            print(f"Tokenizer {model_name_or_path} pad_token missing, use eos_token instead.")
+            if padding_side == "right":
+                tokenizer.pad_token = tokenizer.eos_token
+                print(f"Tokenizer {model_name_or_path} pad_token missing, use eos_token instead.")
+            elif padding_side == "left":
+                tokenizer.pad_token = tokenizer.bos_token
+                print(f"Tokenizer {model_name_or_path} pad_token missing, use bos_token instead.")
         except AttributeError as e:
             print(f"Failed to set the eos_token of tokenizer {model_name_or_path}")
     return tokenizer

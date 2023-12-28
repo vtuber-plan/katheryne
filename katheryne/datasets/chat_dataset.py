@@ -49,7 +49,7 @@ class ChatDataset(Dataset):
         return encoded_text
     
     def get_prompt(self, messages, ignore_last:bool=False):
-        system = ""
+        system = None
         for i, item in enumerate(messages):
             role, content = item["role"], item["content"]
             if role == "system":
@@ -128,6 +128,12 @@ class ChatDataset(Dataset):
         input_ids = encoded_text["input_ids"].squeeze(0)
         attention_mask = encoded_text["attention_mask"].squeeze(0)
 
+        # if truncation not work
+        if len(input_ids) > self.max_seq_len:
+            input_ids = input_ids[:self.max_seq_len]
+            input_ids[-1] = self.tokenizer.eos_token_id
+            attention_mask = attention_mask[:self.max_seq_len]
+
         if isinstance(self.end_of_conversation, int):
             last_token_id = input_ids[-1]
             if last_token_id == self.tokenizer.eos_token_id:
@@ -151,7 +157,6 @@ class ChatDataset(Dataset):
                     torch.tensor([1], dtype=torch.long, device=attention_mask.device)
                     ), dim=0)
 
-        
         labels = input_ids.clone()
         labels = self.mask_label(prompt, labels, indices)
         # TODO: labels pad上IGNORE_TOKEN_ID

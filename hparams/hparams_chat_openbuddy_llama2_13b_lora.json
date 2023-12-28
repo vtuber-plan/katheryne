@@ -12,7 +12,7 @@
     "max_seq_len": 2048,
     "checkpoint_every_n_train_steps": 100,
     "log_every_n_steps": 1,
-    "val_check_interval": 0.25,
+    "val_check_interval": 400,
     "limit_val_batches": 0.1,
     "learning_rate": 3e-5,
     "betas": [0.9, 0.95],
