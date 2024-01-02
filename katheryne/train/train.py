@@ -50,7 +50,6 @@ def parse_args():
     parser.add_argument('--hparams', type=str, default="hparams/hparams_chat_deepseek_7b_lora.json", help='The hparam file of training')
     parser.add_argument('--accelerator', type=str, default="gpu", help='training device')
     parser.add_argument('--device', type=str, default="", help='training device ids')
-    parser.add_argument('--checkpoint', type=str, default="checkpoints/", help='checkpoint path')
     parser.add_argument('--seed', type=int, default=43, help='model seed')
 
     args = parser.parse_args()
@@ -192,6 +191,11 @@ def train(create_dataset, lightning_module_class):
     trainer_params["log_every_n_steps"] = hparams.get("log_every_n_steps", 50)
     trainer_params["val_check_interval"] = hparams.get("val_check_interval", 1.0)
 
+    trainer_params["limit_train_batches"] = hparams.get("limit_train_batches", None)
+    trainer_params["limit_val_batches"] = hparams.get("limit_val_batches", None)
+    trainer_params["limit_test_batches"] = hparams.get("limit_test_batches", None)
+    trainer_params["limit_predict_batches"] = hparams.get("limit_predict_batches", None)
+
     # Devices
     if args.accelerator != "cpu":
         trainer_params["devices"] = devices
@@ -233,6 +237,7 @@ def train(create_dataset, lightning_module_class):
     trainer_params["max_epochs"] = hparams.get("max_epochs", 1000)
     trainer_params["accumulate_grad_batches"] = hparams.get("accumulate_grad_batches", 1)
 
+    # Profiler
     if "advanced_profiler" in hparams:
         profiler = AdvancedProfiler(**hparams.advanced_profiler)
         trainer_params["profiler"] = profiler
@@ -242,6 +247,8 @@ def train(create_dataset, lightning_module_class):
 
     # detect_anomaly
     trainer_params["detect_anomaly"] = hparams.get("detect_anomaly", False)
+    trainer_params["deterministic"] = hparams.get("deterministic", None)
+    trainer_params["benchmark"] = hparams.get("benchmark", None)
 
     # Other params
     if "trainer" in hparams and isinstance(hparams.trainer, dict):

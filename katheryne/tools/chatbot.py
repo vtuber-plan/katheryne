@@ -49,7 +49,10 @@ def load_local_tokenizer(path: str):
         if os.path.exists(model_name):
             tokenizer = AutoTokenizer.from_pretrained(model_name, fast_tokenizer=True)
         else:
-            tokenizer = AutoTokenizer.from_pretrained(path, fast_tokenizer=True)
+            try:
+                tokenizer = AutoTokenizer.from_pretrained(model_name, fast_tokenizer=True)
+            except:
+                tokenizer = AutoTokenizer.from_pretrained(path, fast_tokenizer=True)
     elif os.path.exists(adapter_model_json):
         model_json_file = json.load(open(adapter_model_json))
         model_name = model_json_file["base_model_name_or_path"]
@@ -147,6 +150,9 @@ Buddy possesses vast knowledge about the world, history, and culture."""
         offset=0,
         settings=settings,
     )
+    # history.append_message(settings.roles[0], "你好")
+    # history.append_message(settings.roles[1], "你好呀")
+
     while True:
         num_rounds += 1
         user_input, quit, clear = get_user_input()

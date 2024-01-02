@@ -4,13 +4,14 @@
 import hashlib
 import os
 import shutil
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, TypeAlias, Union
 import numpy as np
 
 import datasets
 import torch
 from torch.utils.data import Dataset, Subset, ConcatDataset
 from tqdm import tqdm
+from katheryne.data.loader import DatasetPath
 from katheryne.datasets.pretrain_dataset import PretrainDataset
 # from katheryne.data.datasets.pretrain_datasets import get_raw_dataset
 # from katheryne.data.datasets import PretrainDataset, PretrainUniformDataset
@@ -83,12 +84,26 @@ def create_dataset(dataset_name, output_path, seed):
     return train_dataset, eval_dataset
 
 
-def create_pretrain_dataset(hparams: HParams, data_path: str, output_path: str, seed: int, tokenizer, max_seq_len: int):
+def create_pretrain_dataset(hparams: HParams, data_path: List[Union[str, DatasetPath]], output_path: str, seed: int, tokenizer, max_seq_len: int):
     """
     Creates the pretrain dataset
     """
+    data_path_obj = []
+    for d_path in data_path:
+        if isinstance(d_path, str):
+            d_path_obj = DatasetPath.model_validate({
+                "path": d_path,
+                "sample": 1.0,
+                "shuffle": False
+            })
+        elif isinstance(d_path, dict):
+            d_path_obj = DatasetPath.model_validate(d_path)
+        else:
+            raise TypeError("Invalid dataset path object, need str or dict.")
+        data_path_obj.append(d_path_obj)
+    
     os.makedirs(output_path, exist_ok=True)
-    data_path_list = ("_".join(data_path)).replace("/", "_").replace("\\", "_")
+    data_path_list = ("_".join([str(p) for p in data_path_obj])).replace("/", "_").replace("\\", "_")
     tokenizer_name = tokenizer.init_kwargs["name_or_path"].replace("/", "_")
     fname = f"{data_path_list}_tokenizer{tokenizer_name}_seqlen{max_seq_len}_seed{seed}" # _tokenizer{tokenizer_name}_seqlen{max_seq_len}
     fname = "_".join(fname.split("/"))
@@ -101,9 +116,23 @@ def create_pretrain_dataset(hparams: HParams, data_path: str, output_path: str, 
     if not cache_found:
         train_datasets = []
         eval_datasets = []
-        for d_path in data_path:
+        for d_path in data_path_obj:
             print(f"Creating dataset: {d_path}")
-            train_dataset, eval_dataset = create_dataset(d_path, output_path, seed)
+            train_dataset, eval_dataset = create_dataset(d_path.path, output_path, seed)
+
+            if d_path.shuffle:
+                train_dataset = train_dataset.shuffle(seed=hparams.get("seed", 43))
+
+            if isinstance(d_path.sample, int):
+                sample_size = d_path.sample
+                train_dataset = train_dataset[:sample_size]
+            elif isinstance(d_path.sample, float):
+                if d_path.sample != 1.0:
+                    sample_size = int(d_path.sample * len(train_dataset))
+                    train_dataset = train_dataset[:sample_size]
+            else:
+                raise TypeError("Invalid sample number of dataset path object, need int or float.")
+    
             if train_dataset is not None:
                 train_datasets.append(train_dataset)
             if eval_dataset is not None:

@@ -76,10 +76,11 @@ class ChatLanguageModel(pl.LightningModule):
         self.log('val_loss', loss, on_step=True, on_epoch=True, sync_dist=False)
 
     def on_save_checkpoint(self, checkpoint):
+        save_path = f"{self.trainer.logger.log_dir}/huggingface_format"
         if self.deepspeed and self.hparams.params.get("zero_stage", 0) == 3:
             # For zero stage 3, each gpu only has a part of the model, so we need a special save function
             save_zero_three_model(self.model, self.global_rank, 
-                                  os.path.join("./lightning_logs/huggingface_format", f"checkpoint-step-{self.global_step}"),
+                                  os.path.join(save_path, f"checkpoint-step-{self.global_step}"),
                                   zero_stage=3
                                 )
         else:
@@ -87,7 +88,7 @@ class ChatLanguageModel(pl.LightningModule):
                 save_hf_format(
                     self.model,
                     tokenizer=None,
-                    output_dir="./lightning_logs/huggingface_format",
+                    output_dir=save_path,
                     sub_folder=f"checkpoint-step-{self.global_step}"
                 )
 
