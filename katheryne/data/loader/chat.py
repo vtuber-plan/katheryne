@@ -111,11 +111,11 @@ def create_chat_dataset(hparams: HParams, data_path: List[Union[str, DatasetPath
 
             if isinstance(d_path.sample, int):
                 sample_size = d_path.sample
-                train_dataset = train_dataset[:sample_size]
+                train_dataset = train_dataset.select(list(range(sample_size)))
             elif isinstance(d_path.sample, float):
                 if d_path.sample != 1.0:
                     sample_size = int(d_path.sample * len(train_dataset))
-                    train_dataset = train_dataset[:sample_size]
+                    train_dataset = train_dataset.select(list(range(sample_size)))
             else:
                 raise TypeError("Invalid sample number of dataset path object, need int or float.")
     

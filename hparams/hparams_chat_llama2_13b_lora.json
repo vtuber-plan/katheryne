@@ -111,7 +111,7 @@
         },
         {
             "path": "../../datasets/HanChat/Summary/",
-            "sample": 1.0
+            "sample": 0.1
         },
         {
             "path": "../../datasets/HanChat/TextCorrection/",

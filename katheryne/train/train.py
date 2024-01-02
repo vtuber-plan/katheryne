@@ -132,7 +132,7 @@ def train(create_dataset, lightning_module_class):
         model.gradient_checkpointing_enable()
     
     # Save Model
-    save_hf_format(model, tokenizer, "./lightning_logs/huggingface_format", sub_folder=f"checkpoint-step-0")
+    # save_hf_format(model, tokenizer, "./lightning_logs/huggingface_format", sub_folder=f"checkpoint-step-0")
     
     # Prepare the data
     print("***** Prepare Dataset *****")
