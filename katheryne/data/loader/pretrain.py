@@ -4,7 +4,7 @@
 import hashlib
 import os
 import shutil
-from typing import List, Optional, Tuple, TypeAlias, Union
+from typing import List, Optional, Tuple, Union
 import numpy as np
 
 import datasets
