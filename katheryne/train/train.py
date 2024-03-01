@@ -234,7 +234,8 @@ def train(create_dataset, lightning_module_class):
     trainer_params["gradient_clip_algorithm"] = hparams.get("gradient_clip_algorithm", "norm")
     trainer_params["gradient_clip_val"] = hparams.get("gradient_clip_val", None)
 
-    trainer_params["max_epochs"] = hparams.get("max_epochs", 1000)
+    trainer_params["max_epochs"] = hparams.get("max_epochs", None)
+    trainer_params["max_steps"] = hparams.get("max_steps", -1)
     trainer_params["accumulate_grad_batches"] = hparams.get("accumulate_grad_batches", 1)
 
     # Profiler
