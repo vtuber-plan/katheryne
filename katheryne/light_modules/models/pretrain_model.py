@@ -75,6 +75,8 @@ class PretrainLanguageModel(pl.LightningModule):
         self.log('val_loss', loss, on_step=True, on_epoch=True, sync_dist=False)
 
     def on_save_checkpoint(self, checkpoint):
+        if self.trainer.logger is None:
+            return
         save_path = f"{self.trainer.logger.log_dir}/huggingface_format"
         if self.deepspeed and self.hparams.params.get("zero_stage", 0) == 3:
             # For zero stage 3, each gpu only has a part of the model, so we need a special save function

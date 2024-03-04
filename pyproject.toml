@@ -20,8 +20,8 @@ dependencies = [
 dev = ["black==23.3.0", "pylint==2.8.2"]
 
 [project.urls]
-"Homepage" = "https://github.com/vtuber-plan/chatproto"
-"Bug Tracker" = "https://github.com/vtuber-plan/chatproto/issues"
+"Homepage" = "https://github.com/vtuber-plan/katheryne"
+"Bug Tracker" = "https://github.com/vtuber-plan/katheryne/issues"
 
 [tool.setuptools.packages.find]
 exclude = ["assets*", "benchmark*", "docs", "dist*", "playground*", "scripts*", "tests*"]

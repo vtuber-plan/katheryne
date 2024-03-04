@@ -20,7 +20,10 @@ lora: {"r": 16, "target_modules": ["q_proj", "v_proj"]}
 
 |              GPU             |  Time   |   GPU Memory   |  Memory Usage  |
 |------------------------------|---------|----------------|----------------|
+|          NVIDIA L40S         |  00:38  |      48G       |    15,134MiB   |
+|NVIDIA RTX 6000 ada Generation|  00:38  |      48G       |    15,134MiB   |
 |    NVIDIA A800 80GB PCIe     |  00:41  |      80G       |    14,850MiB   |
+|    NVIDIA A100 40GB PCIe     |  00:44  |      40G       |    14,863MiB   |
 |   NVIDIA GeForce RTX 4090    |  01:02  |      24G       |    15,078MiB   |
 |      Iluvatar BI-V150        |  01:09  |      32G       |    22,798MiB   |
 |       NVIDIA RTX A6000       |  01:13  |      48G       |    14,944MiB   |
