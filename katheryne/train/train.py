@@ -64,9 +64,12 @@ def setup_lora(
         lora_alpha: int=8,
         lora_dropout: float=0.0,
         fan_in_fan_out: bool=False,
-        bias: str="none"
+        bias: str="none",
+        loftq_config: dict=None,
+        use_dora: bool=False,
     ) -> PeftModel:
-    # loftq_config = LoftQConfig(loftq_bits=4, ...)           # set 4bit quantization
+    # set 4bit quantization
+    loftq_config = LoftQConfig(loftq_bits=4, loftq_iter=1)
     lora_config = LoraConfig(
         r=r,
         target_modules=target_modules,
@@ -74,6 +77,8 @@ def setup_lora(
         lora_dropout=lora_dropout,
         fan_in_fan_out=fan_in_fan_out,
         bias=bias,
+        loftq_config=loftq_config,
+        use_dora=use_dora,
     )
     model = get_peft_model(base_model, lora_config)
     return model
@@ -123,7 +128,9 @@ def train(create_dataset, lightning_module_class):
             lora_alpha=hparams.lora.get("lora_alpha", 8),
             lora_dropout=hparams.lora.get("lora_dropout", 0.0),
             fan_in_fan_out=hparams.lora.get("fan_in_fan_out", False),
-            bias=hparams.lora.get("bias", 'none')
+            bias=hparams.lora.get("bias", 'none'),
+            loftq_config=hparams.lora.get("loftq", None),
+            use_dora=hparams.lora.get("use_dora", False),
         )
         if hparams.get("gradient_checkpointing", False):
             model.enable_input_require_grads()
