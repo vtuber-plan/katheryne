@@ -1,5 +1,6 @@
 import os
 import math
+from typing import Literal
 import torch
 from transformers import (
     AutoConfig,
@@ -7,7 +8,7 @@ from transformers import (
     PreTrainedModel,
 )
 from huggingface_hub import snapshot_download
-from peft import PeftModelForCausalLM
+from peft import PeftModel, PeftModelForCausalLM
 
 def create_hf_model(model_class,
                     model_name_or_path,
@@ -15,10 +16,16 @@ def create_hf_model(model_class,
                     dtype=None,
                     disable_dropout=False,
                     trust_remote_code=True,
-                    use_flash_atten=False) -> PreTrainedModel:
+                    atten_class: Literal["eager", "flash", "sdpa"]=False) -> PreTrainedModel:
     more_args = {}
-    if use_flash_atten:
+    if atten_class == "eager":
+        more_args["attn_implementation"] = "eager"
+    elif atten_class == "flash":
         more_args["attn_implementation"] = "flash_attention_2"
+    elif atten_class == "sdpa":
+        more_args["attn_implementation"] = "sdpa"
+    else:
+        raise Exception("Unknown attention class")
     model_config = AutoConfig.from_pretrained(model_name_or_path, trust_remote_code=trust_remote_code, **more_args)
     if disable_dropout:
         model_config.dropout = 0.0
@@ -37,11 +44,15 @@ def create_hf_model(model_class,
 
     return model
 
-def save_hf_format(model, tokenizer=None, output_dir: str="./", sub_folder: str=""):
+def save_hf_format(model, tokenizer=None, output_dir: str="./", sub_folder: str="", peft_merge=False):
     output_dir = os.path.join(output_dir, sub_folder)
     os.makedirs(output_dir, exist_ok=True)
-    if isinstance(model, PeftModelForCausalLM):
-        merged_model = model.merge_and_unload()
+    
+    if isinstance(model, PeftModel) or isinstance(model, PeftModelForCausalLM):
+        if peft_merge:
+            merged_model = model.merge_and_unload()
+        else:
+            merged_model = model
         merged_model.save_pretrained(output_dir)
     else:
         model.save_pretrained(output_dir)

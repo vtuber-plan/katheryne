@@ -23,11 +23,11 @@ class ChatPipeline(object):
         self.tokenizer = tokenizer
         self.device = device
 
-    def __call__(self, input_text: str, max_new_tokens: int=256) -> Any:
+    def __call__(self, input_text: str, max_new_tokens: int=256, skip_special_tokens=False) -> Any:
         input_ids = self.tokenizer([input_text], return_tensors="pt", padding='longest', max_length=2048, truncation=True)["input_ids"].to(self.device)
         outputs_ids = self.model.generate(inputs=input_ids, max_new_tokens=max_new_tokens,
                                           eos_token_id=self.tokenizer.eos_token_id, pad_token_id=self.tokenizer.eos_token_id)
-        outputs = self.tokenizer.batch_decode(outputs_ids, skip_special_tokens=True)
+        outputs = self.tokenizer.batch_decode(outputs_ids, skip_special_tokens=skip_special_tokens)
         output_text = [{"generated_text": each_text} for each_text in outputs]
         return output_text
 
@@ -72,6 +72,10 @@ def load_local_model(path: str):
         base_model_name = model_json_file["base_model_name_or_path"]
         model_config = AutoConfig.from_pretrained(base_model_name, trust_remote_code=True)
         base_model = AutoModelForCausalLM.from_pretrained(base_model_name, from_tf=bool(".ckpt" in path), config=model_config, trust_remote_code=True)
+        
+        # base_model.load_adapter(path)
+        # base_model.enable_adapters()
+        # model = base_model
         model = PeftModelForCausalLM.from_pretrained(base_model, path)
     else:
         model_config = AutoConfig.from_pretrained(path, trust_remote_code=True)
@@ -83,7 +87,7 @@ def load_remote_model(path: str):
     model = AutoModelForCausalLM.from_pretrained(path, from_tf=bool(".ckpt" in path), config=model_config, trust_remote_code=True)
     return model
 
-def get_generator(path, settings):
+def get_generator(path, settings, device="cuda"):
     if os.path.exists(path):
         tokenizer = load_local_tokenizer(path)
     else:
@@ -100,7 +104,7 @@ def get_generator(path, settings):
     # model.config.pad_token_id = model.config.eos_token_id
     # model.resize_token_embeddings(len(tokenizer))
     # generator = pipeline("text-generation", model=model, tokenizer=tokenizer, device="cuda", eos_token_id=tokenizer.eos_token_id)
-    generator = ChatPipeline(model=model, tokenizer=tokenizer, device="cuda")
+    generator = ChatPipeline(model=model, tokenizer=tokenizer, device=device)
     return generator
 
 

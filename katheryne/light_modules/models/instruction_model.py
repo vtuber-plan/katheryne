@@ -90,7 +90,8 @@ class InstructionLanguageModel(pl.LightningModule):
                     self.model,
                     tokenizer=None,
                     output_dir="./lightning_logs/huggingface_format",
-                    sub_folder=f"checkpoint-step-{self.global_step}"
+                    sub_folder=f"checkpoint-step-{self.global_step}",
+                    peft_merge=self.hparams.get("peft_merge", False),
                 )
         if self.hparams.params.get("lora_dim", 0) > 0:
             unfuse_linear_layer(self.model, self.deepspeed)

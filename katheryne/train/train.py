@@ -116,7 +116,7 @@ def train(create_dataset, lightning_module_class):
         tokenizer=tokenizer,
         dtype=torch_dtype,
         disable_dropout=hparams.disable_dropout,
-        use_flash_atten=hparams.get("flash_attention_2", False),
+        atten_class=hparams.get("atten_class", "eager"),
     )
 
     # Setup LORA
@@ -140,7 +140,7 @@ def train(create_dataset, lightning_module_class):
         model.gradient_checkpointing_enable()
     
     # Save Model
-    # save_hf_format(model, tokenizer, "./lightning_logs/huggingface_format", sub_folder=f"checkpoint-step-0")
+    # save_hf_format(model, tokenizer, "./lightning_logs/huggingface_format", sub_folder=f"checkpoint-step-0", peft_merge=hparams.get("peft_merge", False))
     
     # Prepare the data
     print("***** Prepare Dataset *****")

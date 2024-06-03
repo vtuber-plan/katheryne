@@ -90,7 +90,8 @@ class PretrainLanguageModel(pl.LightningModule):
                     self.model,
                     tokenizer=None,
                     output_dir=save_path,
-                    sub_folder=f"checkpoint-step-{self.global_step}"
+                    sub_folder=f"checkpoint-step-{self.global_step}",
+                    peft_merge=self.hparams.get("peft_merge", False),
                 )
     
     def configure_optimizers(self):
