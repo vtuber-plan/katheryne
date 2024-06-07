@@ -24,7 +24,7 @@ class ChatPipeline(object):
         self.device = device
 
     def __call__(self, input_text: str, max_new_tokens: int=256, skip_special_tokens=False) -> Any:
-        input_ids = self.tokenizer([input_text], return_tensors="pt", padding='longest', max_length=2048, truncation=True)["input_ids"].to(self.device)
+        input_ids = self.tokenizer([input_text], return_tensors="pt", padding='longest', max_length=4096*2, truncation=True)["input_ids"].to(self.device)
         outputs_ids = self.model.generate(inputs=input_ids, max_new_tokens=max_new_tokens,
                                           eos_token_id=self.tokenizer.eos_token_id, pad_token_id=self.tokenizer.eos_token_id)
         outputs = self.tokenizer.batch_decode(outputs_ids, skip_special_tokens=skip_special_tokens)
@@ -129,8 +129,8 @@ def process_response(response, num_rounds):
         output = output[0:place_of_second_q]
     return output
 
-def stop_response(response: str):
-    all_positions = [m.start() for m in re.finditer("\nUser: ", response, re.DOTALL)]
+def stop_response(response: str, stop_str="<|im_end|>"):
+    all_positions = [m.start() for m in re.finditer(stop_str, response, re.DOTALL)]
     if len(all_positions) < 1:
         return response
     else:

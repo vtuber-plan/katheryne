@@ -1,16 +1,24 @@
 {
-    "conv_format": "qwen",
+    "conv_format": "openbuddy",
     "end_of_conversation": 151643,
     "data_path": [
-        "/data/wangjun/github/cangjie/"
+        {
+            "path": "/data/wangjun/github/cangjie/",
+            "sample": 1.0
+        },
+        {
+            "path": "Vtuber-plan/sharegpt-cleaned",
+            "sample": 0.01
+        }
+        
     ],
     "data_output_path": "./tmp/data_files/",
-    "model_name_or_path": "/data/wangjun/models/Qwen1.5-7B-Chat",
+    "model_name_or_path": "/data/wangjun/models/Qwen1.5-4B",
     "atten_class": "eager",
     "per_device_train_batch_size": 2,
     "per_device_eval_batch_size": 8,
     "accumulate_grad_batches": 64,
-    "max_seq_len": 512,
+    "max_seq_len": 1024,
     "checkpoint_every_n_train_steps": 100,
     "log_every_n_steps": 1,
     "val_check_interval": 0.25,

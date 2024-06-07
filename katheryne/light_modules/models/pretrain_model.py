@@ -27,7 +27,7 @@ class PretrainLanguageModel(pl.LightningModule):
         self.vocab_size = self.model.config.vocab_size
 
         self.deepspeed = self.params.get("strategy", None) == "deepspeed"
-        self.offload = self.params.get("offload", False)
+        self.offload = self.params.get("strategy_params", dict()).get("offload", False)
 
         self.save_hyperparameters(ignore=["model"])
 

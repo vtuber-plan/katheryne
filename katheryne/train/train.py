@@ -69,8 +69,15 @@ def setup_lora(
         use_dora: bool=False,
     ) -> PeftModel:
     # set 4bit quantization
-    loftq_config = LoftQConfig(loftq_bits=4, loftq_iter=1)
+    if loftq_config is not None:
+        loftq_config = LoftQConfig(
+            loftq_bits=loftq_config.get("loftq_bits", 4),
+            loftq_iter=loftq_config.get("loftq_iter", 1)
+        )
+    else:
+        loftq_config = {}
     lora_config = LoraConfig(
+        task_type="CAUSAL_LM",
         r=r,
         target_modules=target_modules,
         lora_alpha=lora_alpha,

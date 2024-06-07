@@ -34,5 +34,5 @@
         "r": 128,
         "target_modules": ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "up_proj", "down_proj", "lm_head"]
     },
-    "peft_merge": false
+    "peft_merge": true
 }
