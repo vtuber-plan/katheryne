@@ -76,7 +76,8 @@ def load_local_model(path: str):
         # base_model.load_adapter(path)
         # base_model.enable_adapters()
         # model = base_model
-        model = PeftModelForCausalLM.from_pretrained(base_model, path)
+        model = PeftModelForCausalLM.from_pretrained(base_model, path, is_trainable=True)
+        model.eval()
     else:
         model_config = AutoConfig.from_pretrained(path, trust_remote_code=True)
         model = AutoModelForCausalLM.from_pretrained(path, from_tf=bool(".ckpt" in path), config=model_config, trust_remote_code=True)

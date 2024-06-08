@@ -173,6 +173,7 @@ def train(create_dataset, lightning_module_class):
         model,
         hparams,
     )
+    model.train()
 
     if len(args.device) == 0:
         devices = [i for i in range(torch.cuda.device_count())]

@@ -25,7 +25,8 @@ class InstructionLanguageModel(pl.LightningModule):
         self.vocab_size = self.model.config.vocab_size
 
         self.deepspeed = self.params.get("strategy", None) == "deepspeed"
-        self.offload = self.params.get("strategy_params", dict()).get("offload", False)
+        strategy_params = self.params.get("strategy_params", dict())
+        self.offload = strategy_params.get("offload_optimizer", False) or strategy_params.get("offload_parameters", False)
 
         self.save_hyperparameters(ignore=["model"])
 

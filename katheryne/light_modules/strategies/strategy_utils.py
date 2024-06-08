@@ -29,6 +29,7 @@ def setup_strategy_deepspeed(hparams, world_size, rank, devices):
         ds_precision = "bf16"
     else:
         ds_precision = "fp32"
+    """
     ds_config = get_train_ds_config(
         offload=strategy_params.get("offload", False),
         stage=strategy_params.get("zero_stage", 2),
@@ -37,18 +38,21 @@ def setup_strategy_deepspeed(hparams, world_size, rank, devices):
 
     ds_config['train_micro_batch_size_per_gpu'] = hparams.per_device_train_batch_size
     ds_config['train_batch_size'] = hparams.per_device_train_batch_size * ds_world_size * hparams.accumulate_grad_batches
+    """
+
     ds = DeepSpeedStrategy(
         zero_optimization=True,
         stage=strategy_params.get("zero_stage", 2),
-        remote_device = hparams.get("remote_device", "cpu"),
-        offload_optimizer = strategy_params.get("offload", False),
-        offload_optimizer_device = 'cpu',
-        offload_parameters = strategy_params.get("offload", False),
-        cpu_checkpointing = strategy_params.get("offload", False),
-        offload_params_device = "cpu",
-        nvme_path=hparams.get("nvme_path", "./nvme_offload"),
-        contiguous_memory_optimization=True,
-        config=ds_config,
+        remote_device = strategy_params.get("remote_device", None),
+        offload_optimizer = strategy_params.get("offload_optimizer", False),
+        offload_optimizer_device = strategy_params.get("offload_optimizer_device", "cpu"),
+        offload_parameters = strategy_params.get("offload_parameters", False),
+        offload_params_device = strategy_params.get("offload_params_device", "cpu"),
+        cpu_checkpointing = strategy_params.get("cpu_checkpointing", False),
+        nvme_path=strategy_params.get("nvme_path", "./nvme_offload"),
+        params_buffer_count=strategy_params.get("params_buffer_count", 5),
+        params_buffer_size=strategy_params.get("params_buffer_size", 100_000_000),
+        contiguous_memory_optimization=strategy_params.get("contiguous_memory_optimization", True),
     )
     return ds
 
