@@ -163,3 +163,4 @@ cython_debug/
 /lightning_logs/
 /lightning_logs_*/
 /llm_trainer/
+/nvme_offload/

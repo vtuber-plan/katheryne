@@ -25,8 +25,8 @@ class InstructionLanguageModel(pl.LightningModule):
         self.vocab_size = self.model.config.vocab_size
 
         self.deepspeed = self.params.get("strategy", None) == "deepspeed"
-        strategy_params = self.params.get("strategy_params", dict())
-        self.offload = strategy_params.get("offload_optimizer", False) or strategy_params.get("offload_parameters", False)
+        self.strategy_params = self.params.get("strategy_params", dict())
+        self.offload = self.strategy_params.get("offload_optimizer", False) or self.strategy_params.get("offload_parameters", False)
 
         self.save_hyperparameters(ignore=["model"])
 
@@ -79,7 +79,7 @@ class InstructionLanguageModel(pl.LightningModule):
         if self.hparams.params.get("lora_dim", 0) > 0:
             fuse_linear_layer(self.model, self.deepspeed)
 
-        if self.deepspeed and self.hparams.params.get("zero_stage", 0) == 3:
+        if self.deepspeed and self.strategy_params.get("zero_stage", 0) == 3:
             # For zero stage 3, each gpu only has a part of the model, so we need a special save function
             save_zero_three_model(self.model, self.global_rank, 
                                   os.path.join("./lightning_logs/huggingface_format", f"checkpoint-step-{self.global_step}"),

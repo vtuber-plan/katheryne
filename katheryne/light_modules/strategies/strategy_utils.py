@@ -53,6 +53,7 @@ def setup_strategy_deepspeed(hparams, world_size, rank, devices):
         params_buffer_count=strategy_params.get("params_buffer_count", 5),
         params_buffer_size=strategy_params.get("params_buffer_size", 100_000_000),
         contiguous_memory_optimization=strategy_params.get("contiguous_memory_optimization", True),
+        load_full_weights=strategy_params.get("load_full_weights", False),
     )
     return ds
 

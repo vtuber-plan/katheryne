@@ -3,7 +3,7 @@
     "end_of_conversation": 151643,
     "data_path": [
         {
-            "path": "/data/wangjun/github/cangjie/",
+            "path": "/data/wangjun/github/cangjie_data/",
             "sample": 1.0
         },
         {
@@ -15,10 +15,10 @@
     "data_output_path": "./tmp/data_files/",
     "model_name_or_path": "/data/wangjun/models/Qwen2-7B",
     "atten_class": "eager",
-    "per_device_train_batch_size": 4,
+    "per_device_train_batch_size": 2,
     "per_device_eval_batch_size": 8,
     "accumulate_grad_batches": 128,
-    "max_seq_len": 1024,
+    "max_seq_len": 4096,
     "checkpoint_every_n_train_steps": 100,
     "log_every_n_steps": 1,
     "val_check_interval": 0.25,
@@ -39,7 +39,16 @@
     "gradient_clip_val": 1.0,
     "strategy": "deepspeed",
     "strategy_params": {
-        "offload": true,
-        "zero_stage": 3
+        "zero_stage": 3,
+        "remote_device": null,
+        "offload_optimizer": true,
+        "offload_optimizer_device": "cpu",
+        "offload_parameters": false,
+        "offload_params_device": "cpu",
+        "cpu_checkpointing": true,
+        "nvme_path": "./nvme_offload",
+        "params_buffer_count": 5,
+        "params_buffer_size": 1000000000,
+        "contiguous_memory_optimization": false
     }
 }

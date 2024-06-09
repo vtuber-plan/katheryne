@@ -2,7 +2,7 @@
     "conv_format": "qwen",
     "end_of_conversation": 151643,
     "data_path": [
-        "/data/wangjun/github/cangjie/"
+        "/data/wangjun/github/cangjie_data/"
     ],
     "data_output_path": "./tmp/data_files/",
     "model_name_or_path": "/data/wangjun/models/Qwen1.5-7B",
