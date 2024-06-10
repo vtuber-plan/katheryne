@@ -13,7 +13,7 @@ import lightning.pytorch as pl
 
 from katheryne.utils.hparams import HParams
 from katheryne.utils.model.model_utils import save_hf_format
-from katheryne.utils.utils import get_optimizer_grouped_parameters, optimizer_to, save_zero_three_model
+from katheryne.utils.utils import get_optimizer_grouped_parameters, optimizer_to, save_zero_three_hf_model, save_zero_three_model
 
 class InstructionLanguageModel(pl.LightningModule):
     def __init__(self, model: PreTrainedModel, params: HParams) -> None:
@@ -26,7 +26,7 @@ class InstructionLanguageModel(pl.LightningModule):
 
         self.deepspeed = self.params.get("strategy", None) == "deepspeed"
         self.strategy_params = self.params.get("strategy_params", dict())
-        self.offload = self.strategy_params.get("offload_optimizer", False) or self.strategy_params.get("offload_parameters", False)
+        self.offload = self.strategy_params.get("offload_optimizer", False)
 
         self.save_hyperparameters(ignore=["model"])
 
@@ -76,12 +76,9 @@ class InstructionLanguageModel(pl.LightningModule):
         self.log('val_loss', loss, on_step=True, on_epoch=True, sync_dist=True, rank_zero_only=True)
 
     def on_save_checkpoint(self, checkpoint):
-        if self.hparams.params.get("lora_dim", 0) > 0:
-            fuse_linear_layer(self.model, self.deepspeed)
-
         if self.deepspeed and self.strategy_params.get("zero_stage", 0) == 3:
             # For zero stage 3, each gpu only has a part of the model, so we need a special save function
-            save_zero_three_model(self.model, self.global_rank, 
+            save_zero_three_hf_model(self.model, self.global_rank, 
                                   os.path.join("./lightning_logs/huggingface_format", f"checkpoint-step-{self.global_step}"),
                                   zero_stage=3
                                 )
@@ -94,8 +91,6 @@ class InstructionLanguageModel(pl.LightningModule):
                     sub_folder=f"checkpoint-step-{self.global_step}",
                     peft_merge=self.hparams.get("peft_merge", False),
                 )
-        if self.hparams.params.get("lora_dim", 0) > 0:
-            unfuse_linear_layer(self.model, self.deepspeed)
         
     def configure_optimizers(self):
         optimizer_grouped_parameters = get_optimizer_grouped_parameters(self.trainer.model, self.hparams.params.get("weight_decay", 0.0))

@@ -7,7 +7,7 @@ from typing import Iterable
 import torch
 import random
 import numpy as np
-from transformers import set_seed, AutoTokenizer
+from transformers import set_seed, PreTrainedModel
 import json
 try:
     import deepspeed
@@ -134,6 +134,29 @@ def save_zero_three_model(model_ema, global_rank: int, save_dir: str, zero_stage
                 output_state_dict[k] = v_p
         if global_rank == 0:
             torch.save(output_state_dict, output_model_file)
+        del output_state_dict
+
+def save_zero_three_hf_model(model_ema, global_rank: int, save_dir: str, zero_stage: int=0):
+    zero_stage_3 = (zero_stage == 3)
+    os.makedirs(save_dir, exist_ok=True)
+
+    model_to_save: PreTrainedModel = model_ema.module if hasattr(model_ema, 'module') else model_ema
+    if not zero_stage_3:
+        if global_rank == 0:
+            model_to_save.save_pretrained(save_dir)
+    else:
+        output_state_dict = {}
+        for k, v in model_to_save.named_parameters():
+
+            if hasattr(v, 'ds_id'):
+                with deepspeed.zero.GatheredParameters(_z3_params_to_fetch([v]), enabled=zero_stage_3):
+                    v_p = v.data.cpu()
+            else:
+                v_p = v.cpu()
+            if global_rank == 0:
+                output_state_dict[k] = v_p
+        if global_rank == 0:
+            model_to_save.save_pretrained(save_dir, state_dict=output_state_dict)
         del output_state_dict
 
 def optimizer_to(optim, device):

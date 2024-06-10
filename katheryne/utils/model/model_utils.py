@@ -54,8 +54,10 @@ def save_hf_format(model, tokenizer=None, output_dir: str="./", sub_folder: str=
         else:
             merged_model = model
         merged_model.save_pretrained(output_dir)
-    else:
+    elif isinstance(model, PreTrainedModel):
         model.save_pretrained(output_dir)
+    else:
+        raise Exception("Unsupported model to save.")
 
 
 def save_hf_format_native(model, tokenizer=None, output_dir: str="./", sub_folder: str=""):

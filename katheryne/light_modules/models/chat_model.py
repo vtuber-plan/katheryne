@@ -14,7 +14,7 @@ import lightning.pytorch as pl
 
 from katheryne.utils.hparams import HParams
 from katheryne.utils.model.model_utils import save_hf_format
-from katheryne.utils.utils import get_optimizer_grouped_parameters, optimizer_to, save_zero_three_model
+from katheryne.utils.utils import get_optimizer_grouped_parameters, optimizer_to, save_zero_three_hf_model
 
 class ChatLanguageModel(pl.LightningModule):
     def __init__(self, model: PreTrainedModel, params: HParams) -> None:
@@ -27,7 +27,7 @@ class ChatLanguageModel(pl.LightningModule):
 
         self.deepspeed = self.params.get("strategy", None) == "deepspeed"
         self.strategy_params = self.params.get("strategy_params", dict())
-        self.offload = self.strategy_params.get("offload_optimizer", False) or self.strategy_params.get("offload_parameters", False)
+        self.offload = self.strategy_params.get("offload_optimizer", False)
 
         self.save_hyperparameters(ignore=["model"])
 
@@ -58,7 +58,7 @@ class ChatLanguageModel(pl.LightningModule):
         loss = lm_output[0]
 
         # Logging to TensorBoard by default
-        self.log('train_loss', loss, on_step=True, on_epoch=True, sync_dist=False)
+        self.log('train_loss', loss, on_step=True, on_epoch=True, sync_dist=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -74,13 +74,13 @@ class ChatLanguageModel(pl.LightningModule):
         lm_output = self.forward(tokens=source_tokens)
         loss = lm_output.loss
 
-        self.log('val_loss', loss, on_step=True, on_epoch=True, sync_dist=False)
+        self.log('val_loss', loss, on_step=True, on_epoch=True, sync_dist=True)
 
     def on_save_checkpoint(self, checkpoint):
         save_path = f"{self.trainer.logger.log_dir}/huggingface_format"
         if self.deepspeed and self.strategy_params.get("zero_stage", 0) == 3:
             # For zero stage 3, each gpu only has a part of the model, so we need a special save function
-            save_zero_three_model(self.model, self.global_rank, 
+            save_zero_three_hf_model(self.model, self.global_rank, 
                                   os.path.join(save_path, f"checkpoint-step-{self.global_step}"),
                                   zero_stage=3
                                 )

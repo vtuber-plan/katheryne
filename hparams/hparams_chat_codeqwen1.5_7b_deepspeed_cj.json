@@ -1,9 +1,16 @@
 {
     "conv_format": "openbuddy",
-    "end_of_conversation": 151643,
+    "end_of_conversation": 2,
     "data_path": [
-        "/data/wangjun/github/cangjie/",
-        "Vtuber-plan/sharegpt-cleaned"
+        {
+            "path": "/data/wangjun/github/cangjie_data/",
+            "sample": 1.0
+        },
+        {
+            "path": "Vtuber-plan/sharegpt-cleaned",
+            "sample": 0.01
+        }
+        
     ],
     "data_output_path": "./tmp/data_files/",
     "model_name_or_path": "/data/wangjun/models/CodeQwen1.5-7B",
@@ -12,7 +19,7 @@
     "per_device_eval_batch_size": 8,
     "accumulate_grad_batches": 64,
     "max_seq_len": 1024,
-    "checkpoint_every_n_train_steps": 100,
+    "checkpoint_every_n_train_steps": 1,
     "log_every_n_steps": 1,
     "val_check_interval": 0.25,
     "limit_val_batches": 0.1,
@@ -30,5 +37,18 @@
     "weight_decay": 0.0,
     "gradient_clip_algorithm": "norm",
     "gradient_clip_val": 1.0,
-    "strategy": null
+    "strategy": "deepspeed",
+    "strategy_params": {
+        "zero_stage": 3,
+        "remote_device": null,
+        "offload_optimizer": true,
+        "offload_optimizer_device": "cpu",
+        "offload_parameters": false,
+        "offload_params_device": "cpu",
+        "cpu_checkpointing": true,
+        "nvme_path": "./nvme_offload",
+        "params_buffer_count": 5,
+        "params_buffer_size": 1000000000,
+        "contiguous_memory_optimization": false
+    }
 }
