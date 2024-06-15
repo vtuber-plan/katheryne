@@ -16,7 +16,7 @@ from katheryne.utils.model.model_utils import create_hf_model, save_hf_format
 from katheryne.utils.model.tokenizer_utils import load_hf_tokenizer
 from katheryne.utils.utils import get_optimizer_grouped_parameters, parse_dtype_str
 os.environ['TRANSFORMERS_NO_ADVISORY_WARNINGS'] = 'true'
-os.environ['TOKENIZERS_PARALLELISM'] = 'true'
+# os.environ['TOKENIZERS_PARALLELISM'] = 'true'
 
 import tqdm
 
@@ -46,8 +46,8 @@ from transformers import (
 )
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Pretrain a transformers model on a causal language modeling task")
-    parser.add_argument('--hparams', type=str, default="hparams/hparams_chat_deepseek_7b_lora.json", help='The hparam file of training')
+    parser = argparse.ArgumentParser(description="Train a transformers model on a causal language modeling task")
+    parser.add_argument('--hparams', type=str, default="hparams/hparams_chat_qwen1.5_4b.json", help='The hparam file of training')
     parser.add_argument('--accelerator', type=str, default="gpu", help='training device')
     parser.add_argument('--device', type=str, default="", help='training device ids')
     parser.add_argument('--seed', type=int, default=43, help='model seed')
@@ -103,7 +103,7 @@ def train(create_dataset, lightning_module_class):
     lightning_fabric.seed_everything(args.seed)
 
     # Load tokenizer
-    tokenizer = load_hf_tokenizer(hparams.model_name_or_path, fast_tokenizer=True)
+    # tokenizer = load_hf_tokenizer(hparams.model_name_or_path, fast_tokenizer=True)
     
     # Load model
     torch_dtype_str = hparams.get("model_torch_dtype", "auto")
@@ -120,7 +120,6 @@ def train(create_dataset, lightning_module_class):
     model = create_hf_model(
         model_class=AutoModelForCausalLM,
         model_name_or_path=hparams.model_name_or_path,
-        tokenizer=tokenizer,
         dtype=torch_dtype,
         disable_dropout=hparams.disable_dropout,
         atten_class=hparams.get("atten_class", "eager"),
@@ -152,20 +151,24 @@ def train(create_dataset, lightning_module_class):
     # Prepare the data
     print("***** Prepare Dataset *****")
     train_dataset, valid_dataset = create_dataset(
-        hparams,
-        hparams.data_path,
-        hparams.data_output_path,
-        args.seed,
-        tokenizer,
-        hparams.max_seq_len
+        hparams=hparams,
+        data_path=hparams.data_path,
+        output_path=hparams.data_output_path,
+        seed=args.seed,
+        tokenizer_path=hparams.model_name_or_path,
+        max_seq_len=hparams.max_seq_len,
     )
-
+    
     # DataLoaders creation:
     print("***** DataLoaders creation *****")
     train_sampler = RandomSampler(train_dataset)
     valid_sampler = SequentialSampler(valid_dataset)
     
-    collator = DataCollatorWithPadding(tokenizer=tokenizer, padding="longest", max_length=hparams.max_seq_len)
+    collator = DataCollatorWithPadding(
+        tokenizer=load_hf_tokenizer(hparams.model_name_or_path, fast_tokenizer=True),
+        padding="longest",
+        max_length=hparams.max_seq_len
+    )
     train_dataloader = DataLoader(train_dataset, collate_fn=collator, sampler=train_sampler, num_workers=4, batch_size=hparams.per_device_train_batch_size)
     valid_dataloader = DataLoader(valid_dataset, collate_fn=collator, sampler=valid_sampler, num_workers=4, batch_size=hparams.per_device_eval_batch_size)
 

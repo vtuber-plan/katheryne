@@ -11,16 +11,17 @@ from transformers.trainer_pt_utils import LabelSmoother
 from chatproto.conversation.history import ConversationHistory
 from chatproto.registry import get_conv_settings
 
-from katheryne.utils.model.tokenizer_utils import get_text_offset, is_merge_prefix_space
+from katheryne.utils.model.tokenizer_utils import get_text_offset, is_merge_prefix_space, load_hf_tokenizer
 
 IGNORE_TOKEN_ID = LabelSmoother.ignore_index
 
 class ChatDataset(Dataset):
-    def __init__(self, tokenizer: PreTrainedTokenizerBase, max_seq_len: int,
+    def __init__(self, tokenizer_path: str, max_seq_len: int,
                  dataset: datasets.Dataset, pad_token_id: int, conv_format: str="openbuddy",
                  end_of_conversation: Optional[Union[str, int]]=None) -> None:
         super().__init__()
-        self.tokenizer = tokenizer
+        self.tokenizer_path = tokenizer_path
+        self.tokenizer = None
         self.max_seq_len = max_seq_len
         self.dataset = dataset
         self.pad_token_id = pad_token_id
@@ -34,7 +35,7 @@ class ChatDataset(Dataset):
         else:
             self.end_of_conversation = end_of_conversation
         
-        self.skip_space = is_merge_prefix_space(self.tokenizer)
+        self.skip_space = False
 
     def __len__(self):
         return len(self.dataset)
@@ -117,6 +118,9 @@ class ChatDataset(Dataset):
         return target
 
     def __getitem__(self, idx):
+        if self.tokenizer is None:
+            self.tokenizer = load_hf_tokenizer(self.tokenizer_path, fast_tokenizer=True)
+            self.skip_space = is_merge_prefix_space(self.tokenizer)
         sample = self.dataset[idx]
 
         messages = sample["messages"]
@@ -160,6 +164,7 @@ class ChatDataset(Dataset):
 
         labels = input_ids.clone()
         labels = self.mask_label(prompt, labels, indices)
+        # print(len(input_ids), len(labels))
         # TODO: labels pad上IGNORE_TOKEN_ID
         # labels[:len(encoded_prompt) + 1] = IGNORE_TOKEN_ID # 这里不 + 1抵消bos，是因为可能最后一个token是空格，和回答的第一个token合在一起
         return {

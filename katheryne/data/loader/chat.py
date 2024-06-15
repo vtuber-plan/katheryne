@@ -16,6 +16,7 @@ from katheryne.datasets.pretrain_dataset import PretrainDataset
 from katheryne.utils.data.data_utils import get_shuffle_idx, split_dataset
 from katheryne.utils.diskist import Diskist, extend_diskist, write_diskist
 from katheryne.utils.hparams import HParams
+from katheryne.utils.model.tokenizer_utils import load_hf_tokenizer
 from katheryne.utils.utils import chunked
 
 from datasets import load_dataset
@@ -62,10 +63,11 @@ def create_dataset(dataset_name, output_path, seed) -> Tuple[datasets.Dataset, d
     return train_dataset, eval_dataset
 
 
-def create_chat_dataset(hparams: HParams, data_path: List[Union[str, DatasetPath]], output_path: str, seed: int, tokenizer, max_seq_len: int):
+def create_chat_dataset(hparams: HParams, data_path: List[Union[str, DatasetPath]], output_path: str, seed: int, tokenizer_path: str, max_seq_len: int):
     """
     Creates the chat dataset
     """
+    tokenizer = load_hf_tokenizer(tokenizer_path, fast_tokenizer=True)
     data_path_obj = []
     for d_path in data_path:
         if isinstance(d_path, str):
@@ -133,14 +135,14 @@ def create_chat_dataset(hparams: HParams, data_path: List[Union[str, DatasetPath
     # eval_dataset = datasets.load_from_disk(eval_fname)
 
     # torch.distributed.barrier()
-    train_dataset = ChatDataset(tokenizer, 
+    train_dataset = ChatDataset(tokenizer_path, 
         max_seq_len, 
         train_dataset, 
         tokenizer.pad_token_id, 
         conv_format=conv_format, 
         end_of_conversation=hparams.get("end_of_conversation", None)
     )
-    eval_dataset = ChatDataset(tokenizer, 
+    eval_dataset = ChatDataset(tokenizer_path, 
         max_seq_len, 
         eval_dataset, 
         tokenizer.pad_token_id, 
