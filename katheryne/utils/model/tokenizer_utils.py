@@ -45,10 +45,16 @@ def pad_tokenizer(tokenizer: PreTrainedTokenizer, pad_to: int=64) -> PreTrainedT
     add_token_num = padded_vocab_len - current_vocab_len
     tokenizer.add_tokens([f"TOKENIZER_PAD_TOKEN_{i}" for i in range(add_token_num)])
 
-def get_text_offset(tokenizer: PreTrainedTokenizerBase, text: str, tokens: List[str]):
+def get_text_offset(tokenizer: PreTrainedTokenizerBase, text: str, tokens: List[str], has_special_tokens: bool=False):
     if tokenizer.is_fast:
         text_offset = [-1] * len(tokens)
-        batch_encoding = tokenizer([text])
+        batch_encoding = tokenizer(
+            [text],
+            max_length=len(tokens),
+            padding=False,
+            truncation=True,
+            add_special_tokens=has_special_tokens
+        )
         for token_i in range(len(tokens)):
             span = batch_encoding.token_to_chars(0, token_i)
             if span is None:

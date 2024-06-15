@@ -21,6 +21,7 @@ class PretrainDataset(Dataset):
     def tokenize(self, text):
         encoded_text = self.tokenizer(text,
                         max_length=self.max_seq_len,
+                        padding="longest",
                         truncation=True,
                         return_tensors="pt"
                     )

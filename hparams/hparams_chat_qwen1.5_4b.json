@@ -3,7 +3,7 @@
     "end_of_conversation": 151643,
     "data_path": [
         {
-            "path": "/data/wangjun/github/cangjie/",
+            "path": "/data/wangjun/github/cangjie_data/",
             "sample": 1.0
         },
         {
@@ -18,12 +18,12 @@
     "per_device_train_batch_size": 2,
     "per_device_eval_batch_size": 8,
     "accumulate_grad_batches": 64,
-    "max_seq_len": 1024,
+    "max_seq_len": 2048,
     "checkpoint_every_n_train_steps": 100,
     "log_every_n_steps": 1,
     "val_check_interval": 0.25,
     "limit_val_batches": 0.1,
-    "learning_rate": 8e-6,
+    "learning_rate": 4e-5,
     "betas": [0.9, 0.95],
     "eps": 8e-6,
     "lr_decay": 0.999875,

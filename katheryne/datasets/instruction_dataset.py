@@ -23,6 +23,7 @@ class InstructionDataset(Dataset):
     def tokenize(self, text: str, add_special_tokens: bool=True):
         encoded_text = self.tokenizer(text,
                         max_length=self.max_seq_len,
+                        padding="longest",
                         truncation=True,
                         return_tensors="pt",
                         add_special_tokens=add_special_tokens,

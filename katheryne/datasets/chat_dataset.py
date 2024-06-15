@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import List, Optional, Tuple, Union
 import numpy as np
 import torch
 import datasets
@@ -42,13 +42,14 @@ class ChatDataset(Dataset):
     def tokenize(self, text: str, add_special_tokens: bool=True):
         encoded_text = self.tokenizer(text,
                         max_length=self.max_seq_len,
+                        padding="longest",
                         truncation=True,
                         return_tensors="pt",
                         add_special_tokens=add_special_tokens,
                     )
         return encoded_text
     
-    def get_prompt(self, messages, ignore_last:bool=False):
+    def get_prompt(self, messages, ignore_last:bool=False) -> Tuple[str, List[Tuple[int, int]]]:
         system = None
         for i, item in enumerate(messages):
             role, content = item["role"], item["content"]
@@ -77,9 +78,9 @@ class ChatDataset(Dataset):
             history.messages.append((real_role, content))
         return history.get_prompt_and_indices()
 
-    def mask_label(self, prompt: str, target, indices):
-        tokens = self.tokenizer.convert_ids_to_tokens(target, skip_special_tokens=True)
-        text_offset = get_text_offset(self.tokenizer, prompt, tokens)
+    def mask_label(self, prompt: str, target: torch.Tensor, indices: List[Tuple[int, int]]):
+        tokens = self.tokenizer.convert_ids_to_tokens(target, skip_special_tokens=False)
+        text_offset = get_text_offset(self.tokenizer, prompt, tokens, has_special_tokens=True)
 
         cur_len = 1
         target[:cur_len] = IGNORE_TOKEN_ID
