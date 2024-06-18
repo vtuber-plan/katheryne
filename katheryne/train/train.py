@@ -104,6 +104,7 @@ def train(create_dataset, lightning_module_class):
 
     # Load tokenizer
     # tokenizer = load_hf_tokenizer(hparams.model_name_or_path, fast_tokenizer=True)
+    tokenizer_path = hparams.get("tokenizer_path", hparams.model_name_or_path)
     
     # Load model
     torch_dtype_str = hparams.get("model_torch_dtype", "auto")
@@ -155,7 +156,7 @@ def train(create_dataset, lightning_module_class):
         data_path=hparams.data_path,
         output_path=hparams.data_output_path,
         seed=args.seed,
-        tokenizer_path=hparams.model_name_or_path,
+        tokenizer_path=tokenizer_path,
         max_seq_len=hparams.max_seq_len,
     )
     
@@ -165,7 +166,7 @@ def train(create_dataset, lightning_module_class):
     valid_sampler = SequentialSampler(valid_dataset)
     
     collator = DataCollatorWithPadding(
-        tokenizer=load_hf_tokenizer(hparams.model_name_or_path, fast_tokenizer=True),
+        tokenizer=load_hf_tokenizer(tokenizer_path, fast_tokenizer=True, show_info=True),
         padding="longest",
         max_length=hparams.max_seq_len
     )

@@ -3,10 +3,6 @@
     "end_of_conversation": 151643,
     "data_path": [
         {
-            "path": "/data/wangjun/github/cangjie_data/",
-            "sample": 1.0
-        },
-        {
             "path": "Vtuber-plan/sharegpt-cleaned",
             "sample": 0.01
         }

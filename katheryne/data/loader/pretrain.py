@@ -13,7 +13,6 @@ from torch.utils.data import Dataset, Subset, ConcatDataset
 from tqdm import tqdm
 from katheryne.data.loader import DatasetPath
 from katheryne.datasets.pretrain_dataset import PretrainDataset
-# from katheryne.data.datasets.pretrain_datasets import get_raw_dataset
 # from katheryne.data.datasets import PretrainDataset, PretrainUniformDataset
 
 from katheryne.utils.data.data_utils import get_shuffle_idx, split_dataset
