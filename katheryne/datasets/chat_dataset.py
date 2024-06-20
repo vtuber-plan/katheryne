@@ -4,11 +4,9 @@ import torch
 import datasets
 from torch.utils.data import Dataset
 
-from transformers import PreTrainedTokenizerBase
-
 from transformers.trainer_pt_utils import LabelSmoother
 
-from chatproto.conversation.history import ConversationHistory
+from chatproto.conversation.history import ConversationHistory, ConversationSettings
 from chatproto.registry import get_conv_settings
 
 from katheryne.utils.model.tokenizer_utils import get_text_offset, is_merge_prefix_space, load_hf_tokenizer
@@ -17,7 +15,7 @@ IGNORE_TOKEN_ID = LabelSmoother.ignore_index
 
 class ChatDataset(Dataset):
     def __init__(self, tokenizer_path: str, max_seq_len: int,
-                 dataset: datasets.Dataset, pad_token_id: int, conv_format: str="openbuddy",
+                 dataset: datasets.Dataset, pad_token_id: int, conv_format: Union[str, ConversationSettings]="openbuddy",
                  end_of_conversation: Optional[Union[str, int]]=None) -> None:
         super().__init__()
         self.tokenizer_path = tokenizer_path
@@ -25,8 +23,10 @@ class ChatDataset(Dataset):
         self.max_seq_len = max_seq_len
         self.dataset = dataset
         self.pad_token_id = pad_token_id
-
-        self.settings = get_conv_settings(conv_format)
+        if isinstance(conv_format, str):
+            self.settings = get_conv_settings(conv_format)
+        else:
+            self.settings = conv_format
         if end_of_conversation is None:
             if self.tokenizer.eos_token_id is None:
                 self.end_of_conversation = self.tokenizer.pad_token_id
@@ -49,35 +49,31 @@ class ChatDataset(Dataset):
                         add_special_tokens=add_special_tokens,
                     )
         return encoded_text
-    
-    def get_prompt(self, messages, ignore_last:bool=False) -> Tuple[str, List[Tuple[int, int]]]:
-        system = None
-        for i, item in enumerate(messages):
-            role, content = item["role"], item["content"]
-            if role == "system":
-                system = content
-                break
-        history = ConversationHistory(
-            system=system,
-            messages=[],
-            offset=0,
-            settings=self.settings,
-        )
 
-        for i, item in enumerate(messages):
-            role, content = item["role"], item["content"]
-            if role == "system":
-                continue
-            if ignore_last and i == len(messages) - 1:
-                content = None
-            if role.lower() == "user":
-                real_role = self.settings.roles[0]
-            elif role.lower() == "assistant":
-                real_role = self.settings.roles[1]
+    def add_end_of_conv(self, input_ids, attention_mask, end_of_conversation: Union[str, int]):
+        if isinstance(end_of_conversation, int):
+            last_token_id = input_ids[-1]
+            if last_token_id == self.tokenizer.eos_token_id:
+                if end_of_conversation != self.tokenizer.eos_token_id:
+                    input_ids[-1] = end_of_conversation
+                    input_ids = torch.cat((
+                            input_ids,
+                            torch.tensor([self.tokenizer.eos_token_id], dtype=torch.long, device=input_ids.device)
+                        ), dim=0)
+                    attention_mask = torch.cat((
+                        attention_mask,
+                        torch.tensor([1], dtype=torch.long, device=attention_mask.device)
+                        ), dim=0)
             else:
-                raise Exception(f"Unknown role {role}")
-            history.messages.append((real_role, content))
-        return history.get_prompt_and_indices()
+                input_ids = torch.cat((
+                        input_ids,
+                        torch.tensor([end_of_conversation], dtype=torch.long, device=input_ids.device)
+                    ), dim=0)
+                attention_mask = torch.cat((
+                    attention_mask,
+                    torch.tensor([1], dtype=torch.long, device=attention_mask.device)
+                    ), dim=0)
+        return input_ids, attention_mask
 
     def mask_label(self, prompt: str, target: torch.Tensor, indices: List[Tuple[int, int]]):
         tokens = self.tokenizer.convert_ids_to_tokens(target, skip_special_tokens=False)
@@ -117,6 +113,35 @@ class ChatDataset(Dataset):
             exit()
         return target
 
+    def get_prompt(self, messages, ignore_last:bool=False) -> Tuple[str, List[Tuple[int, int]]]:
+        system = None
+        for i, item in enumerate(messages):
+            role, content = item["role"], item["content"]
+            if role == "system":
+                system = content
+                break
+        history = ConversationHistory(
+            system=system,
+            messages=[],
+            offset=0,
+            settings=self.settings,
+        )
+
+        for i, item in enumerate(messages):
+            role, content = item["role"], item["content"]
+            if role == "system":
+                continue
+            if ignore_last and i == len(messages) - 1:
+                content = None
+            if role.lower() == "user":
+                real_role = self.settings.roles[0]
+            elif role.lower() == "assistant":
+                real_role = self.settings.roles[1]
+            else:
+                raise Exception(f"Unknown role {role}")
+            history.messages.append((real_role, content))
+        return history.get_prompt_and_indices()
+
     def __getitem__(self, idx):
         if self.tokenizer is None:
             self.tokenizer = load_hf_tokenizer(self.tokenizer_path, fast_tokenizer=True)
@@ -139,28 +164,7 @@ class ChatDataset(Dataset):
             input_ids[-1] = self.tokenizer.eos_token_id
             attention_mask = attention_mask[:self.max_seq_len]
 
-        if isinstance(self.end_of_conversation, int):
-            last_token_id = input_ids[-1]
-            if last_token_id == self.tokenizer.eos_token_id:
-                if self.end_of_conversation != self.tokenizer.eos_token_id:
-                    input_ids[-1] = self.end_of_conversation
-                    input_ids = torch.cat((
-                            input_ids,
-                            torch.tensor([self.tokenizer.eos_token_id], dtype=torch.long, device=input_ids.device)
-                        ), dim=0)
-                    attention_mask = torch.cat((
-                        attention_mask,
-                        torch.tensor([1], dtype=torch.long, device=attention_mask.device)
-                        ), dim=0)
-            else:
-                input_ids = torch.cat((
-                        input_ids,
-                        torch.tensor([self.end_of_conversation], dtype=torch.long, device=input_ids.device)
-                    ), dim=0)
-                attention_mask = torch.cat((
-                    attention_mask,
-                    torch.tensor([1], dtype=torch.long, device=attention_mask.device)
-                    ), dim=0)
+        input_ids, attention_mask = self.add_end_of_conv(input_ids, attention_mask, self.end_of_conversation)
 
         labels = input_ids.clone()
         labels = self.mask_label(prompt, labels, indices)

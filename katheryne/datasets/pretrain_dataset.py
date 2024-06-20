@@ -2,13 +2,10 @@
 import torch
 from torch.utils.data import Dataset, Subset, ConcatDataset
 import datasets
-from transformers import PreTrainedTokenizerBase
-
 from katheryne.utils.model.tokenizer_utils import load_hf_tokenizer
 
 
 class PretrainDataset(Dataset):
-
     def __init__(self, tokenizer_path: str, max_seq_len: int, pretrain_dataset: datasets.Dataset, pad_token_id: int) -> None:
         super().__init__()
         self.tokenizer_path = tokenizer_path
