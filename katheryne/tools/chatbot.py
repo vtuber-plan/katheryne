@@ -45,7 +45,11 @@ def load_local_tokenizer(path: str):
     adapter_model_json = os.path.join(path, "adapter_config.json")
     if os.path.exists(model_json):
         model_json_file = json.load(open(model_json))
-        model_name = model_json_file["_name_or_path"]
+        if "_name_or_path" in model_json_file:
+            model_name = model_json_file["_name_or_path"]
+        else:
+            model_name = path
+
         if os.path.exists(model_name):
             tokenizer = AutoTokenizer.from_pretrained(model_name, fast_tokenizer=True)
         else:

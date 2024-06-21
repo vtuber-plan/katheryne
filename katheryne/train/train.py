@@ -170,8 +170,8 @@ def train(create_dataset, lightning_module_class):
         padding="longest",
         max_length=hparams.max_seq_len
     )
-    train_dataloader = DataLoader(train_dataset, collate_fn=collator, sampler=train_sampler, num_workers=4, batch_size=hparams.per_device_train_batch_size)
-    valid_dataloader = DataLoader(valid_dataset, collate_fn=collator, sampler=valid_sampler, num_workers=4, batch_size=hparams.per_device_eval_batch_size)
+    train_dataloader = DataLoader(train_dataset, collate_fn=collator, sampler=train_sampler, num_workers=hparams.get("train_num_workers", 4), batch_size=hparams.per_device_train_batch_size)
+    valid_dataloader = DataLoader(valid_dataset, collate_fn=collator, sampler=valid_sampler, num_workers=hparams.get("valid_num_workers", 4), batch_size=hparams.per_device_eval_batch_size)
 
     model = lightning_module_class(
         model,
