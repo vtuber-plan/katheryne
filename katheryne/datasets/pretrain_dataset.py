@@ -1,3 +1,9 @@
+# coding=utf-8
+# Copyright 2024 XiaHan
+# 
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
 
 import torch
 from torch.utils.data import Dataset, Subset, ConcatDataset
@@ -18,12 +24,13 @@ class PretrainDataset(Dataset):
         length = len(self.pretrain_dataset)
         return length
 
-    def tokenize(self, text):
+    def tokenize(self, text: str, add_special_tokens: bool=True):
         encoded_text = self.tokenizer(text,
                         max_length=self.max_seq_len,
                         padding="longest",
                         truncation=True,
-                        return_tensors="pt"
+                        return_tensors="pt",
+                        add_special_tokens=add_special_tokens,
                     )
         return encoded_text
 

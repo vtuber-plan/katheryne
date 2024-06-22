@@ -3,6 +3,7 @@
 
 # DeepSpeed Team
 
+import torch
 import argparse
 import re
 import logging
@@ -24,12 +25,23 @@ class ChatPipeline(object):
         self.device = device
 
     def __call__(self, input_text: str, max_new_tokens: int=256, skip_special_tokens=False) -> Any:
+        input_fake = self.tokenizer([input_text], return_tensors="pt", padding='longest')["input_ids"]
+        token_num = int(input_fake.shape[1])
+        print(f"Token Number: {token_num}")
         input_ids = self.tokenizer([input_text], return_tensors="pt", padding='longest', max_length=4096*2, truncation=True)["input_ids"].to(self.device)
         outputs_ids = self.model.generate(inputs=input_ids, max_new_tokens=max_new_tokens,
                                           eos_token_id=self.tokenizer.eos_token_id, pad_token_id=self.tokenizer.eos_token_id)
         outputs = self.tokenizer.batch_decode(outputs_ids, skip_special_tokens=skip_special_tokens)
         output_text = [{"generated_text": each_text} for each_text in outputs]
         return output_text
+    
+    def stream_generate(self, input_text: str, max_new_tokens: int=256, skip_special_tokens=False) -> Any:
+        input_fake = self.tokenizer([input_text], return_tensors="pt", padding='longest')["input_ids"]
+        token_num = int(input_fake.shape[1])
+        print(f"Token Number: {token_num}")
+        input_ids = self.tokenizer([input_text], return_tensors="pt", padding='longest', max_length=4096*2, truncation=True)["input_ids"].to(self.device)
+        return self.model.generate(inputs=input_ids, max_new_tokens=max_new_tokens,
+                                          eos_token_id=self.tokenizer.eos_token_id, pad_token_id=self.tokenizer.eos_token_id)
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -75,7 +87,7 @@ def load_local_model(path: str):
         model_json_file = json.load(open(adapter_model_json))
         base_model_name = model_json_file["base_model_name_or_path"]
         model_config = AutoConfig.from_pretrained(base_model_name, trust_remote_code=True)
-        base_model = AutoModelForCausalLM.from_pretrained(base_model_name, from_tf=bool(".ckpt" in path), config=model_config, trust_remote_code=True)
+        base_model = AutoModelForCausalLM.from_pretrained(base_model_name, from_tf=bool(".ckpt" in path), config=model_config, trust_remote_code=True, torch_dtype=torch.bfloat16)
         
         # base_model.load_adapter(path)
         # base_model.enable_adapters()
@@ -84,12 +96,12 @@ def load_local_model(path: str):
         model.eval()
     else:
         model_config = AutoConfig.from_pretrained(path, trust_remote_code=True)
-        model = AutoModelForCausalLM.from_pretrained(path, from_tf=bool(".ckpt" in path), config=model_config, trust_remote_code=True)
+        model = AutoModelForCausalLM.from_pretrained(path, from_tf=bool(".ckpt" in path), config=model_config, trust_remote_code=True, torch_dtype=torch.bfloat16)
     return model
 
 def load_remote_model(path: str):
     model_config = AutoConfig.from_pretrained(path, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(path, from_tf=bool(".ckpt" in path), config=model_config, trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained(path, from_tf=bool(".ckpt" in path), config=model_config, trust_remote_code=True, torch_dtype=torch.bfloat16)
     return model
 
 def get_generator(path, settings, device="cuda"):

@@ -15,6 +15,8 @@ from katheryne.data.collators import DataCollatorWithPadding
 from katheryne.utils.model.model_utils import create_hf_model, save_hf_format
 from katheryne.utils.model.tokenizer_utils import load_hf_tokenizer
 from katheryne.utils.utils import get_optimizer_grouped_parameters, parse_dtype_str
+
+from katheryne.models.adapters import setup_lora
 os.environ['TRANSFORMERS_NO_ADVISORY_WARNINGS'] = 'true'
 # os.environ['TOKENIZERS_PARALLELISM'] = 'true'
 
@@ -45,6 +47,7 @@ from transformers import (
     get_scheduler,
 )
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a transformers model on a causal language modeling task")
     parser.add_argument('--hparams', type=str, default="hparams/hparams_chat_qwen1.5_4b.json", help='The hparam file of training')
@@ -55,40 +58,6 @@ def parse_args():
 
     args = parser.parse_args()
     return args
-
-from peft import LoftQConfig, LoraConfig, get_peft_model, PeftModel
-def setup_lora(
-        base_model: PreTrainedModel,
-        r: int=128,
-        target_modules: Optional[List[str]]=None,
-        lora_alpha: int=8,
-        lora_dropout: float=0.0,
-        fan_in_fan_out: bool=False,
-        bias: str="none",
-        loftq_config: dict=None,
-        use_dora: bool=False,
-    ) -> PeftModel:
-    # set 4bit quantization
-    if loftq_config is not None:
-        loftq_config = LoftQConfig(
-            loftq_bits=loftq_config.get("loftq_bits", 4),
-            loftq_iter=loftq_config.get("loftq_iter", 1)
-        )
-    else:
-        loftq_config = {}
-    lora_config = LoraConfig(
-        task_type="CAUSAL_LM",
-        r=r,
-        target_modules=target_modules,
-        lora_alpha=lora_alpha,
-        lora_dropout=lora_dropout,
-        fan_in_fan_out=fan_in_fan_out,
-        bias=bias,
-        loftq_config=loftq_config,
-        use_dora=use_dora,
-    )
-    model = get_peft_model(base_model, lora_config)
-    return model
 
 def train(create_dataset, lightning_module_class):
     torch.autograd.set_detect_anomaly(True)
