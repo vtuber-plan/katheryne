@@ -1,3 +1,9 @@
+# coding=utf-8
+# Copyright 2024 XiaHan
+# 
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
 
 import hashlib
 import os
@@ -68,7 +74,7 @@ def create_chat_dataset(hparams: HParams, data_path: List[Union[str, DatasetPath
     Creates the chat dataset
     """
     tokenizer = load_hf_tokenizer(tokenizer_path, fast_tokenizer=True)
-    data_path_obj = []
+    data_path_obj: List[DatasetPath] = []
     for d_path in data_path:
         if isinstance(d_path, str):
             d_path_obj = DatasetPath.model_validate({
@@ -135,16 +141,18 @@ def create_chat_dataset(hparams: HParams, data_path: List[Union[str, DatasetPath
     # eval_dataset = datasets.load_from_disk(eval_fname)
 
     # torch.distributed.barrier()
-    train_dataset = ChatDataset(tokenizer_path, 
-        max_seq_len, 
-        train_dataset, 
+    train_dataset = ChatDataset(
+        train_dataset,
+        tokenizer_path, 
+        max_seq_len,
         tokenizer.pad_token_id, 
         conv_format=conv_format, 
         end_of_conversation=hparams.get("end_of_conversation", None)
     )
-    eval_dataset = ChatDataset(tokenizer_path, 
-        max_seq_len, 
-        eval_dataset, 
+    eval_dataset = ChatDataset(
+        eval_dataset,
+        tokenizer_path,
+        max_seq_len,
         tokenizer.pad_token_id, 
         conv_format=conv_format, 
         end_of_conversation=hparams.get("end_of_conversation", None)

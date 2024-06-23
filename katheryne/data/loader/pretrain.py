@@ -1,5 +1,9 @@
-
-
+# coding=utf-8
+# Copyright 2024 XiaHan
+# 
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
 
 import hashlib
 import os
@@ -148,6 +152,6 @@ def create_pretrain_dataset(hparams: HParams, data_path: List[Union[str, Dataset
     # eval_dataset = datasets.load_from_disk(eval_fname)
 
     # torch.distributed.barrier()
-    train_dataset = PretrainDataset(tokenizer_path, max_seq_len, train_dataset, tokenizer.pad_token_id)
-    eval_dataset = PretrainDataset(tokenizer_path, max_seq_len, eval_dataset, tokenizer.pad_token_id)
+    train_dataset = PretrainDataset(train_dataset, tokenizer_path, max_seq_len, tokenizer.pad_token_id)
+    eval_dataset = PretrainDataset(eval_dataset, tokenizer_path, max_seq_len, tokenizer.pad_token_id)
     return train_dataset, eval_dataset

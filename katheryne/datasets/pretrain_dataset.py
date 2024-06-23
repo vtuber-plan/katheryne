@@ -12,12 +12,12 @@ from katheryne.utils.model.tokenizer_utils import load_hf_tokenizer
 
 
 class PretrainDataset(Dataset):
-    def __init__(self, tokenizer_path: str, max_seq_len: int, pretrain_dataset: datasets.Dataset, pad_token_id: int) -> None:
+    def __init__(self, pretrain_dataset: datasets.Dataset, tokenizer_path: str, max_seq_len: int, pad_token_id: int) -> None:
         super().__init__()
+        self.pretrain_dataset = pretrain_dataset
         self.tokenizer_path = tokenizer_path
         self.tokenizer = None
         self.max_seq_len = max_seq_len
-        self.pretrain_dataset = pretrain_dataset
         self.pad_token_id = pad_token_id
 
     def __len__(self):

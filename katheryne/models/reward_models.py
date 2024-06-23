@@ -59,7 +59,7 @@ class KatheryneForRewardModel(nn.Module):
             return_dict=return_dict,
         )
         hidden_states = transformer_outputs[0]
-        logits = self.score(hidden_states)
+        logits = self.v_head(hidden_states)
 
         if input_ids is not None:
             batch_size = input_ids.shape[0]
