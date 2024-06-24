@@ -41,7 +41,7 @@ def load_chat_messages(dataset_name: str, field: Union[str, List[str]], split:st
 
     return messages_only_dataset
 
-def create_dataset(dataset_name, output_path, seed) -> Tuple[datasets.Dataset, datasets.Dataset]:
+def create_dataset(dataset_name) -> Tuple[datasets.Dataset, datasets.Dataset]:
     raw_datasets = load_dataset(dataset_name)
     if "train" in raw_datasets:
         raw_train_dataset = load_chat_messages(dataset_name, "messages", split="train")
@@ -69,7 +69,7 @@ def create_dataset(dataset_name, output_path, seed) -> Tuple[datasets.Dataset, d
     return train_dataset, eval_dataset
 
 
-def create_chat_dataset(hparams: HParams, data_path: List[Union[str, DatasetPath]], output_path: str, seed: int, tokenizer_path: str, max_seq_len: int):
+def create_chat_dataset(hparams: HParams, data_path: List[Union[str, DatasetPath]], tokenizer_path: str, max_seq_len: int):
     """
     Creates the chat dataset
     """
@@ -89,58 +89,42 @@ def create_chat_dataset(hparams: HParams, data_path: List[Union[str, DatasetPath
         data_path_obj.append(d_path_obj)
 
     conv_format = hparams.get("conv_format", "openbuddy")
-    os.makedirs(output_path, exist_ok=True)
-    data_path_list = ("_".join([str(p) for p in data_path_obj])).replace("/", "_").replace("\\", "_")
-    tokenizer_name = tokenizer.init_kwargs["name_or_path"].replace("/", "_")
-    fname = f"{data_path_list}_tokenizer{tokenizer_name}_seqlen{max_seq_len}_seed{seed}" # _tokenizer{tokenizer_name}_seqlen{max_seq_len}
-    fname = "_".join(fname.split("/"))
-    fname_hash = hashlib.sha256(fname.encode()).hexdigest()  # hash the file name to avoid too long file name
-    train_fname = f"{output_path}/traindata_{fname_hash}"
-    eval_fname = f"{output_path}/evaldata_{fname_hash}"
-
-    cache_found = os.path.isdir(train_fname) and os.path.isdir(eval_fname)
 
     CHAT_FEATURES = datasets.Features({'messages': [{
         'role': datasets.Value(dtype='string', id=None),
         'content': datasets.Value(dtype='string', id=None)
         }]
     })
-    if not cache_found:
-        train_datasets = []
-        eval_datasets = []
-        for di, d_path in enumerate(data_path_obj):
-            print(f"Creating dataset: {d_path}")
-            train_dataset, eval_dataset = create_dataset(d_path.path, output_path, seed)
-            train_dataset = train_dataset.cast(CHAT_FEATURES)
-            eval_dataset = eval_dataset.cast(CHAT_FEATURES)
 
-            if d_path.shuffle:
-                train_dataset = train_dataset.shuffle(seed=hparams.get("seed", 43))
+    train_datasets = []
+    eval_datasets = []
+    for di, d_path in enumerate(data_path_obj):
+        print(f"Creating dataset: {d_path}")
+        train_dataset, eval_dataset = create_dataset(d_path.path)
+        train_dataset = train_dataset.cast(CHAT_FEATURES)
+        eval_dataset = eval_dataset.cast(CHAT_FEATURES)
 
-            if isinstance(d_path.sample, int):
-                sample_size = d_path.sample
+        if d_path.shuffle:
+            train_dataset = train_dataset.shuffle(seed=hparams.get("seed", 43))
+
+        if isinstance(d_path.sample, int):
+            sample_size = d_path.sample
+            train_dataset = train_dataset.select(list(range(sample_size)))
+        elif isinstance(d_path.sample, float):
+            if d_path.sample != 1.0:
+                sample_size = int(d_path.sample * len(train_dataset))
                 train_dataset = train_dataset.select(list(range(sample_size)))
-            elif isinstance(d_path.sample, float):
-                if d_path.sample != 1.0:
-                    sample_size = int(d_path.sample * len(train_dataset))
-                    train_dataset = train_dataset.select(list(range(sample_size)))
-            else:
-                raise TypeError("Invalid sample number of dataset path object, need int or float.")
-    
-            if train_dataset is not None:
-                train_datasets.append(train_dataset)
-            if eval_dataset is not None:
-                eval_datasets.append(eval_dataset)
-        
-        train_dataset = datasets.concatenate_datasets(train_datasets)
-        eval_dataset = datasets.concatenate_datasets(eval_datasets)
-    
-        # train_dataset.save_to_disk(train_fname, max_shard_size="4GB", num_proc=8)
-        # eval_dataset.save_to_disk(eval_fname, max_shard_size="4GB", num_proc=8)
-    # train_dataset = datasets.load_from_disk(train_fname)
-    # eval_dataset = datasets.load_from_disk(eval_fname)
+        else:
+            raise TypeError("Invalid sample number of dataset path object, need int or float.")
 
-    # torch.distributed.barrier()
+        if train_dataset is not None:
+            train_datasets.append(train_dataset)
+        if eval_dataset is not None:
+            eval_datasets.append(eval_dataset)
+    
+    train_dataset = datasets.concatenate_datasets(train_datasets)
+    eval_dataset = datasets.concatenate_datasets(eval_datasets)
+
     train_dataset = ChatDataset(
         train_dataset,
         tokenizer_path, 

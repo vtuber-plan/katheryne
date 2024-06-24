@@ -123,8 +123,6 @@ def train(create_dataset, lightning_module_class):
     train_dataset, valid_dataset = create_dataset(
         hparams=hparams,
         data_path=hparams.data_path,
-        output_path=hparams.data_output_path,
-        seed=args.seed,
         tokenizer_path=tokenizer_path,
         max_seq_len=hparams.max_seq_len,
     )

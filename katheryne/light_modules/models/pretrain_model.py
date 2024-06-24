@@ -1,13 +1,15 @@
-
-
+# coding=utf-8
+# Copyright 2024 XiaHan
+# 
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
 
 import os
 from typing import Any, Dict
 import torch
 from torch import nn, optim
 from torch.nn import functional as F
-from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
-from torch.distributed.fsdp import FullStateDictConfig, StateDictType
 
 from transformers import PreTrainedModel, get_scheduler
 
