@@ -34,12 +34,10 @@ class KatheryneForRewardModel(nn.Module):
 
     def forward(
         self,
-        input_ids: torch.LongTensor = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_values: Optional[List[torch.FloatTensor]] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        labels: Optional[torch.LongTensor] = None,
+        chosen_input_ids: Optional[torch.LongTensor] = None,
+        chosen_attention_mask: Optional[torch.Tensor] = None,
+        rejected_input_ids: Optional[torch.LongTensor] = None,
+        rejected_attention_mask: Optional[torch.Tensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
@@ -47,24 +45,34 @@ class KatheryneForRewardModel(nn.Module):
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        transformer_outputs = self.model(
+        if chosen_input_ids is None or rejected_input_ids is None:
+            raise Exception("The chosen_input_ids and rejected_input_ids shall not be None.")
+        if chosen_input_ids is not None:
+            chosen_batch_size = chosen_input_ids.shape[0]
+        else:
+            raise Exception("The chosen_input_ids shall not be None.")
+        if rejected_input_ids is not None:
+            rejected_batch_size = rejected_input_ids.shape[0]
+        else:
+            raise Exception("The rejected_input_ids shall not be None.")
+        if chosen_batch_size != rejected_batch_size:
+            raise Exception("The batch size of chosen sentences should equal to that of rejected sentences.")
+        batch_size = chosen_batch_size
+
+        # chosen_input_ids, rejected_input_ids: [batch, seq]
+        input_ids = torch.cat([chosen_input_ids, rejected_input_ids], dim=1)
+        attention_mask = torch.cat([chosen_attention_mask, rejected_attention_mask], dim=1)
+
+        lm_outputs = self.base_model(
             input_ids,
             attention_mask=attention_mask,
-            position_ids=position_ids,
-            past_key_values=past_key_values,
-            inputs_embeds=inputs_embeds,
             use_cache=use_cache,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        hidden_states = transformer_outputs[0]
+        hidden_states = lm_outputs[0]
         logits = self.v_head(hidden_states)
-
-        if input_ids is not None:
-            batch_size = input_ids.shape[0]
-        else:
-            batch_size = inputs_embeds.shape[0]
 
         if self.config.pad_token_id is None and batch_size != 1:
             raise ValueError("Cannot handle batch sizes > 1 if no padding token is defined.")

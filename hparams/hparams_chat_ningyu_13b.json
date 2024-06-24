@@ -1,4 +1,5 @@
 {
+    "train_stage": "chat",
     "conv_format": "openbuddy",
     "data_path": [
         {

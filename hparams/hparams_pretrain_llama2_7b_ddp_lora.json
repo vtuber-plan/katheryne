@@ -1,4 +1,5 @@
 {
+    "train_stage": "pretrain",
     "data_path": [
         "bigscience-data/roots_zh-cn_wikipedia"
     ],
@@ -30,6 +31,9 @@
     },
     "lora": {
         "r": 128,
-        "target_modules": ["q_proj", "v_proj"]
-    }
+        "lora_alpha": 32,
+        "lora_dropout": 0.2,
+        "bias": "all",
+        "target_modules": "all-linear"
+    },
 }

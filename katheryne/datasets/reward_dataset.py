@@ -42,30 +42,50 @@ class RewardDataset(ConversationDataset):
         sample = self.dataset[idx]
 
         messages = sample["messages"]
-        prompt, indices = self.get_prompt(messages)
+        chosen = sample["chosen"]
+        rejected = sample["rejected"]
+
+        chosen_messages = messages + {"role": "assistant", "content": chosen}
+        rejected_messages = messages + {"role": "assistant", "content": rejected}
+
+        """Chosen messages"""
+        chosen_prompt, chosen_indices = self.get_prompt(chosen_messages)
         if isinstance(self.end_of_conversation, str):
-            prompt += self.end_of_conversation
-
-        encoded_text = self.tokenize(prompt, add_special_tokens=True)
-
-        input_ids = encoded_text["input_ids"].squeeze(0)
-        attention_mask = encoded_text["attention_mask"].squeeze(0)
+            chosen_prompt += self.end_of_conversation
+        
+        chosen_encoded_text = self.tokenize(chosen_prompt, add_special_tokens=True)
+        chosen_input_ids = chosen_encoded_text["input_ids"].squeeze(0)
+        chosen_attention_mask = chosen_encoded_text["attention_mask"].squeeze(0)
 
         # if truncation not work
-        if len(input_ids) > self.max_seq_len:
-            input_ids = input_ids[:self.max_seq_len]
-            input_ids[-1] = self.tokenizer.eos_token_id
-            attention_mask = attention_mask[:self.max_seq_len]
+        if len(chosen_input_ids) > self.max_seq_len:
+            chosen_input_ids = chosen_input_ids[:self.max_seq_len]
+            chosen_input_ids[-1] = self.tokenizer.eos_token_id
+            chosen_attention_mask = chosen_attention_mask[:self.max_seq_len]
+        
+        chosen_input_ids, chosen_attention_mask = self.add_end_of_conv(chosen_input_ids, chosen_attention_mask, self.end_of_conversation)
 
-        input_ids, attention_mask = self.add_end_of_conv(input_ids, attention_mask, self.end_of_conversation)
+        """Rejected messages"""
+        rejected_prompt, rejected_indices = self.get_prompt(rejected_messages)
+        if isinstance(self.end_of_conversation, str):
+            rejected_prompt += self.end_of_conversation
 
-        labels = input_ids.clone()
-        labels = self.mask_label(prompt, labels, indices)
-        # print(len(input_ids), len(labels))
-        # TODO: labels pad上IGNORE_TOKEN_ID
-        # labels[:len(encoded_prompt) + 1] = IGNORE_TOKEN_ID # 这里不 + 1抵消bos，是因为可能最后一个token是空格，和回答的第一个token合在一起
+        rejected_encoded_text = self.tokenize(rejected_prompt, add_special_tokens=True)
+        rejected_input_ids = rejected_encoded_text["input_ids"].squeeze(0)
+        rejected_attention_mask = rejected_encoded_text["attention_mask"].squeeze(0)
+
+        # if truncation not work
+        if len(rejected_input_ids) > self.max_seq_len:
+            rejected_input_ids = rejected_input_ids[:self.max_seq_len]
+            rejected_input_ids[-1] = self.tokenizer.eos_token_id
+            rejected_attention_mask = rejected_attention_mask[:self.max_seq_len]
+        
+        rejected_input_ids, rejected_attention_mask = self.add_end_of_conv(rejected_input_ids, rejected_attention_mask, self.end_of_conversation)
+
+
         return {
-            "input_ids": input_ids,
-            "attention_mask": attention_mask,
-            "labels": labels
+            "chosen_input_ids": chosen_input_ids,
+            "chosen_attention_mask": chosen_attention_mask,
+            "rejected_input_ids": rejected_input_ids,
+            "rejected_attention_mask": rejected_attention_mask,
         }

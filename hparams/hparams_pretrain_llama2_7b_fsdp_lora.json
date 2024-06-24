@@ -1,6 +1,7 @@
 {
+    "train_stage": "pretrain",
     "data_path": [
-        "dataset/pretrain_mlh"
+        "bigscience-data/roots_zh-cn_wikipedia"
     ],
     "data_output_path": "./tmp/data_files/",
     "model_name_or_path": "meta-llama/Llama-2-7b-hf",

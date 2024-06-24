@@ -1,13 +1,14 @@
 {
+    "train_stage": "pretrain",
     "data_path": [
         "bigscience-data/roots_zh-cn_wikipedia"
     ],
     "data_output_path": "./tmp/data_files/",
     "model_name_or_path": "meta-llama/Llama-2-7b-hf",
-    "per_device_train_batch_size": 2,
+    "per_device_train_batch_size": 4,
     "per_device_eval_batch_size": 4,
-    "accumulate_grad_batches": 32,
-    "max_seq_len": 1024,
+    "accumulate_grad_batches": 128,
+    "max_seq_len": 2048,
     "checkpoint_every_n_train_steps": 1000,
     "log_every_n_steps": 1,
     "val_check_interval": 0.25,
@@ -24,13 +25,25 @@
     "bf16": true,
     "gradient_checkpointing": true,
     "weight_decay": 0.0,
-    "strategy": "deepspeed",
-    "strategy_params": {
-        "offload": false,
-        "zero_stage": 2
-    },
     "lora": {
         "r": 128,
-        "target_modules": ["q_proj", "v_proj"]
+        "lora_alpha": 32,
+        "lora_dropout": 0.2,
+        "bias": "all",
+        "target_modules": "all-linear"
+    },
+    "strategy": "deepspeed",
+    "strategy_params": {
+        "zero_stage": 3,
+        "remote_device": null,
+        "offload_optimizer": false,
+        "offload_optimizer_device": "cpu",
+        "offload_parameters": false,
+        "offload_params_device": "cpu",
+        "cpu_checkpointing": true,
+        "nvme_path": "./nvme_offload",
+        "params_buffer_count": 5,
+        "params_buffer_size": 1000000000,
+        "contiguous_memory_optimization": false
     }
 }
