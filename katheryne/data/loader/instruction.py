@@ -102,6 +102,8 @@ def create_instruction_dataset(hparams: HParams, data_path: List[Union[str, Data
 
         if d_path.shuffle:
             train_dataset = train_dataset.shuffle(seed=hparams.get("seed", 43))
+        
+        print(f"{d_path} - Dataset size: {len(train_dataset)}")
 
         if isinstance(d_path.sample, int):
             sample_size = d_path.sample
@@ -110,8 +112,12 @@ def create_instruction_dataset(hparams: HParams, data_path: List[Union[str, Data
             if d_path.sample != 1.0:
                 sample_size = int(d_path.sample * len(train_dataset))
                 train_dataset = train_dataset.select(list(range(sample_size)))
+            else:
+                sample_size = len(train_dataset)
         else:
             raise TypeError("Invalid sample number of dataset path object, need int or float.")
+
+        print(f"{d_path} - Selected size: {sample_size}")
 
         if train_dataset is not None:
             train_datasets.append(train_dataset)

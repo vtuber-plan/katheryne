@@ -1,4 +1,5 @@
 {
+    "train_stage": "chat",
     "conv_format": "qwen",
     "end_of_conversation": 151643,
     "data_path": [

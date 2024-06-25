@@ -4,7 +4,7 @@
 # Use of this source code is governed by an MIT-style
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
-from katheryne.train.base import train, parse_args
+from katheryne.stages.base import train, parse_args
 from katheryne.utils.hparams import HParams
 
 def instruction():

@@ -34,14 +34,9 @@ class ConversationDataset(Dataset):
             self.settings = get_conv_settings(conv_format)
         else:
             self.settings = conv_format
-        if end_of_conversation is None:
-            if self.tokenizer.eos_token_id is None:
-                self.end_of_conversation = self.tokenizer.pad_token_id
-            else:
-                self.end_of_conversation = self.tokenizer.eos_token_id
-        else:
-            self.end_of_conversation = end_of_conversation
         
+        self.end_of_conversation = end_of_conversation
+
         self.skip_space = False
 
     def tokenize(self, text: str, add_special_tokens: bool=True):
@@ -54,7 +49,9 @@ class ConversationDataset(Dataset):
                     )
         return encoded_text
 
-    def add_end_of_conv(self, input_ids, attention_mask, end_of_conversation: Union[str, int]):
+    def add_end_of_conv(self, input_ids, attention_mask, end_of_conversation: Optional[Union[str, int]]):
+        if end_of_conversation is None:
+            return input_ids, attention_mask
         if isinstance(end_of_conversation, int):
             last_token_id = input_ids[-1]
             if last_token_id == self.tokenizer.eos_token_id:
@@ -98,12 +95,13 @@ class ConversationDataset(Dataset):
             target[cur_len:start] = IGNORE_TOKEN_ID
             cur_len = end
 
-        if isinstance(self.end_of_conversation, str):
-            end_conv = np.searchsorted(text_offset, len(prompt)-len(self.end_of_conversation))
-        elif isinstance(self.end_of_conversation, int):
-            end_conv = np.searchsorted(text_offset, len(prompt)-1)
-        else:
-             raise Exception(f"Type of end_of_conversation is {type(self.end_of_conversation)}, which is not supported.")
+        if self.end_of_conversation is not None:
+            if isinstance(self.end_of_conversation, str):
+                end_conv = np.searchsorted(text_offset, len(prompt)-len(self.end_of_conversation))
+            elif isinstance(self.end_of_conversation, int):
+                end_conv = np.searchsorted(text_offset, len(prompt)-1)
+            else:
+                raise Exception(f"Type of end_of_conversation is {type(self.end_of_conversation)}, which is not supported.")
         target[end_conv:end] = IGNORE_TOKEN_ID
         if False:  # Inspect and check the correctness of masking
             z = target.clone()
@@ -150,3 +148,10 @@ class ConversationDataset(Dataset):
         if self.tokenizer is None:
             self.tokenizer = load_hf_tokenizer(self.tokenizer_path, fast_tokenizer=True)
             self.skip_space = is_merge_prefix_space(self.tokenizer)
+
+            if self.end_of_conversation is None:
+                if self.tokenizer.eos_token_id is None:
+                    self.end_of_conversation = self.tokenizer.pad_token_id
+                else:
+                    self.end_of_conversation = self.tokenizer.eos_token_id
+
