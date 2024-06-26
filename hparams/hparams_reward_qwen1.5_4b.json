@@ -5,7 +5,8 @@
     "data_path": [
         {
             "path": "Dahoas/rm-static",
-            "sample": 1
+            "sample": 1,
+            "preprocessor": "rm_static"
         }
         
     ],

@@ -1,4 +1,5 @@
 {
+    "train_stage": "chat",
     "detect_anomaly": false,
     "conv_format": "deepseek",
     "data_path": [

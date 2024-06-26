@@ -93,20 +93,8 @@ def create_pretrain_dataset(hparams: HParams, data_path: List[Union[str, Dataset
     Creates the pretrain dataset
     """
     tokenizer = load_hf_tokenizer(tokenizer_path, fast_tokenizer=True)
-    data_path_obj = []
-    for d_path in data_path:
-        if isinstance(d_path, str):
-            d_path_obj = DatasetPath.model_validate({
-                "path": d_path,
-                "sample": 1.0,
-                "shuffle": False
-            })
-        elif isinstance(d_path, dict):
-            d_path_obj = DatasetPath.model_validate(d_path)
-        else:
-            raise TypeError("Invalid dataset path object, need str or dict.")
-        data_path_obj.append(d_path_obj)
-
+    data_path_obj = DatasetPath.from_data_path(data_path)
+    
     train_datasets = []
     eval_datasets = []
     for d_path in data_path_obj:

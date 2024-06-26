@@ -1,4 +1,5 @@
 {
+    "train_stage": "chat",
     "conv_format": "chatglm3",
     "data_path": [
         "Vtuber-plan/sharegpt-cleaned"

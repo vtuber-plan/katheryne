@@ -1,4 +1,5 @@
 {
+    "train_stage": "pretrain",
     "data_path": [
         "bigscience-data/roots_zh-cn_wikipedia"
     ],

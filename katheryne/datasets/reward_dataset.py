@@ -41,12 +41,12 @@ class RewardDataset(ConversationDataset):
         self._init_tokenizer()
         sample = self.dataset[idx]
 
-        messages = sample["messages"]
+        messages = sample["prompt"]
         chosen = sample["chosen"]
         rejected = sample["rejected"]
 
-        chosen_messages = messages + {"role": "assistant", "content": chosen}
-        rejected_messages = messages + {"role": "assistant", "content": rejected}
+        chosen_messages = messages + [{"role": "assistant", "content": chosen}]
+        rejected_messages = messages + [{"role": "assistant", "content": rejected}]
 
         """Chosen messages"""
         chosen_prompt, chosen_indices = self.get_prompt(chosen_messages)
