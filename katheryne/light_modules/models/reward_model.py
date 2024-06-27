@@ -58,13 +58,17 @@ class RewardLanguageModel(pl.LightningModule):
         return lm_output
 
     def training_step(self, batch, batch_idx: int):
-        input_ids, input_mask, labels = batch["input_ids"], batch["attention_mask"], batch["labels"]
+        chosen_input_ids = batch["chosen_input_ids"]
+        chosen_attention_mask = batch["chosen_attention_mask"]
+        rejected_input_ids = batch["rejected_input_ids"]
+        rejected_attention_mask = batch["rejected_attention_mask"]
 
-        batch_size = input_ids.shape[0]
+        batch_size = chosen_input_ids.shape[0]
         source_tokens = {
-            'input_ids': input_ids,
-            'attention_mask': input_mask,
-            'labels': labels,
+            'chosen_input_ids': chosen_input_ids,
+            'chosen_attention_mask': chosen_attention_mask,
+            'rejected_input_ids': rejected_input_ids,
+            'rejected_attention_mask': rejected_attention_mask,
         }
 
         lm_output = self.forward(tokens=source_tokens)
