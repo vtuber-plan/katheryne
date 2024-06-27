@@ -82,7 +82,25 @@ class RewardDataset(ConversationDataset):
         
         rejected_input_ids, rejected_attention_mask = self.add_end_of_conv(rejected_input_ids, rejected_attention_mask, self.end_of_conversation)
 
-
+        """padd chosen and rejected"""
+        chosen_seq_len = chosen_input_ids.shape[0]
+        rejected_seq_len = rejected_input_ids.shape[0]
+        pad_seq_len = max(chosen_seq_len, rejected_seq_len)
+        if pad_seq_len == chosen_seq_len:
+            padded_rejected_input_ids = torch.full(size=(pad_seq_len,), fill_value=self.pad_token_id)
+            padded_rejected_input_ids[:rejected_seq_len] = rejected_input_ids
+            padded_rejected_attention_mask = torch.full(size=(pad_seq_len,), fill_value=self.pad_token_id)
+            padded_rejected_attention_mask[:rejected_seq_len] = rejected_attention_mask
+            rejected_input_ids = padded_rejected_input_ids
+            rejected_attention_mask = padded_rejected_attention_mask
+        else:
+            padded_chosen_input_ids = torch.full(size=(pad_seq_len,), fill_value=self.pad_token_id)
+            padded_chosen_input_ids[:chosen_seq_len] = chosen_input_ids
+            padded_chosen_attention_mask = torch.full(size=(pad_seq_len,), fill_value=self.pad_token_id)
+            padded_chosen_attention_mask[:chosen_seq_len] = chosen_attention_mask
+            chosen_input_ids = padded_chosen_input_ids
+            chosen_attention_mask = padded_chosen_attention_mask
+        
         return {
             "chosen_input_ids": chosen_input_ids,
             "chosen_attention_mask": chosen_attention_mask,

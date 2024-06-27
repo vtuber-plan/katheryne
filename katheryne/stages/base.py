@@ -90,8 +90,16 @@ def train(args: argparse.Namespace, hparams: HParams, create_dataset, lightning_
     if torch_dtype == torch.float16 and args.accelerator in ["cpu"]:
         raise RuntimeError("Models in float16 cannot run with the accelerator CPU.")
     
+    model_class_config = hparams.get("model_class", "AutoModelForCausalLM")
+    if model_class_config == "AutoModelForCausalLM":
+        model_class = AutoModelForCausalLM
+    elif model_class_config == "AutoModel":
+        model_class = AutoModel
+    else:
+        raise Exception("Unsupported model class config.")
+    
     model = create_hf_model(
-        model_class=AutoModelForCausalLM,
+        model_class=model_class,
         model_name_or_path=hparams.model_name_or_path,
         dtype=torch_dtype,
         disable_dropout=hparams.disable_dropout,
@@ -146,6 +154,7 @@ def train(args: argparse.Namespace, hparams: HParams, create_dataset, lightning_
     model = lightning_module_class(
         model,
         hparams,
+        load_hf_tokenizer(tokenizer_path, fast_tokenizer=True, show_info=True).pad_token_id
     )
     model.train()
 

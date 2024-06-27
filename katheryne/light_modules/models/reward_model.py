@@ -6,7 +6,7 @@
 # https://opensource.org/licenses/MIT.
 
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import torch
 from torch import nn, optim
 from torch.nn import functional as F
@@ -15,18 +15,23 @@ from transformers import PreTrainedModel, get_scheduler
 
 import lightning.pytorch as pl
 
+from katheryne.models.reward_models import KatheryneForRewardModel
 from katheryne.utils.hparams import HParams
 from katheryne.utils.model.model_utils import save_hf_format
 from katheryne.utils.utils import get_optimizer_grouped_parameters, optimizer_to, save_zero_three_hf_model, save_zero_three_model
 
 class RewardLanguageModel(pl.LightningModule):
-    def __init__(self, model: PreTrainedModel, params: HParams) -> None:
+    def __init__(self, model: PreTrainedModel, params: HParams, pad_token_id: Optional[int]=None) -> None:
         super().__init__()
         self.params = params
 
-        self.model = model
-        self.pad_token_id = self.model.config.pad_token_id
-        self.vocab_size = self.model.config.vocab_size
+        if pad_token_id is not None:
+            self.pad_token_id = pad_token_id
+        else:
+            self.pad_token_id = model.config.pad_token_id
+        self.vocab_size = model.config.vocab_size
+
+        self.model = KatheryneForRewardModel(model, self.pad_token_id)
 
         self.deepspeed = self.params.get("strategy", None) == "deepspeed"
         self.strategy_params = self.params.get("strategy_params", dict())
@@ -35,13 +40,18 @@ class RewardLanguageModel(pl.LightningModule):
         self.save_hyperparameters(ignore=["model"])
 
     def forward(self, tokens: Dict[str, torch.Tensor]):
-        input_ids, input_mask, labels = tokens["input_ids"], tokens["attention_mask"], tokens["labels"]
-        batch_size = input_ids.shape[0]
+        chosen_input_ids = tokens["chosen_input_ids"]
+        chosen_attention_mask = tokens["chosen_attention_mask"]
+        rejected_input_ids = tokens["rejected_input_ids"]
+        rejected_attention_mask = tokens["rejected_attention_mask"]
+
+        batch_size = chosen_input_ids.shape[0]
 
         lm_output = self.model(
-            input_ids=input_ids,
-            attention_mask=input_mask,
-            labels=labels,
+            chosen_input_ids=chosen_input_ids,
+            chosen_attention_mask=chosen_attention_mask,
+            rejected_input_ids=rejected_input_ids,
+            rejected_attention_mask=rejected_attention_mask,
             use_cache=False,
             return_dict=True,
         )
@@ -65,13 +75,17 @@ class RewardLanguageModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        input_ids, input_mask, labels = batch["input_ids"], batch["attention_mask"], batch["labels"]
+        chosen_input_ids = batch["chosen_input_ids"]
+        chosen_attention_mask = batch["chosen_attention_mask"]
+        rejected_input_ids = batch["rejected_input_ids"]
+        rejected_attention_mask = batch["rejected_attention_mask"]
 
-        batch_size = input_ids.shape[0]
+        batch_size = chosen_input_ids.shape[0]
         source_tokens = {
-            'input_ids': input_ids,
-            'attention_mask': input_mask,
-            'labels': labels,
+            'chosen_input_ids': chosen_input_ids,
+            'chosen_attention_mask': chosen_attention_mask,
+            'rejected_input_ids': rejected_input_ids,
+            'rejected_attention_mask': rejected_attention_mask,
         }
 
         lm_output = self.forward(tokens=source_tokens)

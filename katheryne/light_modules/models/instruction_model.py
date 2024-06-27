@@ -6,7 +6,7 @@
 # https://opensource.org/licenses/MIT.
 
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import torch
 from torch import nn, optim
 from torch.nn import functional as F
@@ -20,13 +20,16 @@ from katheryne.utils.model.model_utils import save_hf_format
 from katheryne.utils.utils import get_optimizer_grouped_parameters, optimizer_to, save_zero_three_hf_model, save_zero_three_model
 
 class InstructionLanguageModel(pl.LightningModule):
-    def __init__(self, model: PreTrainedModel, params: HParams) -> None:
+    def __init__(self, model: PreTrainedModel, params: HParams, pad_token_id: Optional[int]=None) -> None:
         super().__init__()
         self.params = params
 
+        if pad_token_id is not None:
+            self.pad_token_id = pad_token_id
+        else:
+            self.pad_token_id = model.config.pad_token_id
+        self.vocab_size = model.config.vocab_size
         self.model = model
-        self.pad_token_id = self.model.config.pad_token_id
-        self.vocab_size = self.model.config.vocab_size
 
         self.deepspeed = self.params.get("strategy", None) == "deepspeed"
         self.strategy_params = self.params.get("strategy_params", dict())
