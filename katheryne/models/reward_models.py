@@ -40,8 +40,7 @@ class KatheryneForRewardModel(nn.Module):
             self.v_head = nn.Linear(self.config.n_embd, 1, bias=False)
         
         self.pad_token_id = pad_token_id
-        print("====")
-        print(self.pad_token_id)
+
         self.num_padding_at_beginning = num_padding_at_beginning
         self.compute_fp32_loss = compute_fp32_loss
 

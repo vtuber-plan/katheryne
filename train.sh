@@ -1,2 +1,2 @@
-python -m katheryne.stages.train --hparams hparams/hparams_chat_qwen1.5_7b_cj_lora.json --device 0
+python -m katheryne.stages.train --hparams custom_hparams/hparams_pretrain_qwen1.5_14b_lora_deepspeed_cj.json --device 0 --path llm_trainer_cj
 python -m katheryne.stages.train --hparams hparams/hparams_reward_qwen1.5_4b.json --device 0 --path llm_trainer_reward

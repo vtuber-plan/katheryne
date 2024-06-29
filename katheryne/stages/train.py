@@ -27,9 +27,13 @@ def auto_train_stage():
         from katheryne.data.loader.chat import create_chat_dataset
         train(args, hparams, create_chat_dataset, ChatLanguageModel)
     elif train_stage in ["reward", "rm"]:
-        from katheryne.light_modules.models.reward_model import RewardLanguageModel
+        from katheryne.light_modules.models.reward_model import RewardTokenLanguageModel
         from katheryne.data.loader.reward import create_reward_dataset
-        train(args, hparams, create_reward_dataset, RewardLanguageModel)
+        train(args, hparams, create_reward_dataset, RewardTokenLanguageModel)
+    elif train_stage in ["reward_seq", "rm_seq"]:
+        from katheryne.light_modules.models.reward_model import RewardSequenceLanguageModel
+        from katheryne.data.loader.reward import create_reward_dataset
+        train(args, hparams, create_reward_dataset, RewardSequenceLanguageModel)
     else:
         raise NotImplementedError("The train stage has not been implemented.")
 

@@ -1,6 +1,6 @@
 import os
 import math
-from typing import Literal
+from typing import Any, Dict, Literal, Optional
 import torch
 from transformers import (
     AutoConfig,
@@ -10,12 +10,15 @@ from transformers import (
 from huggingface_hub import snapshot_download
 from peft import PeftModel, PeftModelForCausalLM
 
+from transformers import AutoModelForSequenceClassification, AutoModelForTokenClassification
+
 def create_hf_model(model_class,
                     model_name_or_path,
                     dtype=None,
                     disable_dropout=False,
                     trust_remote_code=True,
-                    atten_class: Literal["eager", "flash", "sdpa"]=False) -> PreTrainedModel:
+                    atten_class: Literal["eager", "flash", "sdpa"]=False,
+                    model_kwargs: Optional[Dict[str, Any]]=None) -> PreTrainedModel:
     more_args = {}
     if atten_class == "eager":
         more_args["attn_implementation"] = "eager"
@@ -25,9 +28,19 @@ def create_hf_model(model_class,
         more_args["attn_implementation"] = "sdpa"
     else:
         raise Exception("Unknown attention class")
+    
     model_config = AutoConfig.from_pretrained(model_name_or_path, trust_remote_code=trust_remote_code, **more_args)
     if disable_dropout:
         model_config.dropout = 0.0
+    
+    if model_kwargs is None:
+        model_kwargs_dict = {}
+    else:
+        model_kwargs_dict = model_kwargs
+    
+    if isinstance(model_class, AutoModelForSequenceClassification) or isinstance(model_class, AutoModelForTokenClassification):
+        if "num_labels" not in model_kwargs_dict:
+            model_kwargs_dict["num_labels"] = 1
 
     model = model_class.from_pretrained(
         model_name_or_path,
@@ -35,6 +48,7 @@ def create_hf_model(model_class,
         config=model_config,
         trust_remote_code=trust_remote_code,
         torch_dtype=dtype,
+        **model_kwargs_dict,
     )
 
     # model.config.end_token_id = tokenizer.eos_token_id

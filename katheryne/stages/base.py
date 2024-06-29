@@ -13,6 +13,7 @@ import json
 import glob
 import argparse
 import platform
+import warnings
 from katheryne.light_modules.strategies.strategy_utils import setup_strategy_ddp, setup_strategy_deepspeed, setup_strategy_fsdp
 from katheryne.utils.hparams import HParams
 from katheryne.light_modules.utils.checkpoints import get_lastest_checkpoint
@@ -45,6 +46,8 @@ import lightning_fabric
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
+    AutoModelForSequenceClassification,
+    AutoModelForTokenClassification,
     AutoModel,
     PreTrainedModel,
     PreTrainedTokenizerBase,
@@ -93,17 +96,22 @@ def train(args: argparse.Namespace, hparams: HParams, create_dataset, lightning_
     model_class_config = hparams.get("model_class", "AutoModelForCausalLM")
     if model_class_config == "AutoModelForCausalLM":
         model_class = AutoModelForCausalLM
+    elif model_class_config == "AutoModelForSequenceClassification":
+        model_class = AutoModelForSequenceClassification
+    elif model_class_config == "AutoModelForTokenClassification":
+        model_class = AutoModelForTokenClassification
     elif model_class_config == "AutoModel":
         model_class = AutoModel
     else:
         raise Exception("Unsupported model class config.")
-    
+
     model = create_hf_model(
         model_class=model_class,
         model_name_or_path=hparams.model_name_or_path,
         dtype=torch_dtype,
         disable_dropout=hparams.disable_dropout,
         atten_class=hparams.get("atten_class", "eager"),
+        model_kwargs=hparams.get("model_kwargs", {}),
     )
 
     # Setup LORA
@@ -118,10 +126,18 @@ def train(args: argparse.Namespace, hparams: HParams, create_dataset, lightning_
             bias=hparams.lora.get("bias", 'none'),
             loftq_config=hparams.lora.get("loftq", None),
             use_dora=hparams.lora.get("use_dora", False),
+            task_type=hparams.lora.get("task_type", "CAUSAL_LM")
         )
         if hparams.get("gradient_checkpointing", False):
             model.enable_input_require_grads()
         # model.print_trainable_parameters()
+
+        if model_class_config == "AutoModelForSequenceClassification":
+            if hparams.lora.get("task_type", "CAUSAL_LM") != "SEQ_CLS":
+                warnings.warn(
+                    "You are using a `task_type` that is different than `SEQ_CLS` for PEFT. This will lead to silent bugs"
+                    " Make sure to pass --lora_task_type SEQ_CLS when using this script."
+                )
     
     if hparams.get("gradient_checkpointing", False):
         model.gradient_checkpointing_enable()

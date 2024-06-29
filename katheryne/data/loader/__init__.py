@@ -112,6 +112,8 @@ def create_dataset(dataset: DatasetPath, columns: List[str], preprocessor: Optio
         if dataset.sample != 1.0:
             sample_size = int(dataset.sample * len(train_dataset))
             train_dataset = train_dataset.select(list(range(sample_size)))
+        else:
+            sample_size = len(train_dataset)
     else:
         raise TypeError("Invalid sample number of dataset path object, need int or float.")
 
