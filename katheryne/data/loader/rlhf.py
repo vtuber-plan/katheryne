@@ -37,7 +37,7 @@ def create_rlhf_dataset(hparams: HParams, data_path: List[Union[str, DatasetPath
     eval_datasets = []
     for di, d_path in enumerate(data_path_obj):
         print(f"Creating dataset: {d_path}")
-        train_dataset, eval_dataset = create_dataset(d_path, columns=["prompt", "chosen", "rejected"], preprocessor=d_path.preprocessor, seed=hparams.get("seed", 43))
+        train_dataset, eval_dataset = create_dataset(d_path, columns=["messages"], preprocessor=d_path.preprocessor, seed=hparams.get("seed", 43))
         # train_dataset = train_dataset.cast(REWARD_FEATURES)
         # eval_dataset = eval_dataset.cast(REWARD_FEATURES)
 

@@ -26,6 +26,7 @@ from transformers import (
     PreTrainedTokenizerBase,
 )
 
+from katheryne.data.collators import DataCollatorWithPadding
 from katheryne.models.adapters import setup_lora
 from katheryne.utils.hparams import HParams
 from katheryne.utils.model.model_utils import create_hf_model
@@ -42,16 +43,22 @@ def rlhf_train(args: argparse.Namespace, hparams: HParams, create_dataset):
     # If passed along, set the training seed now.
     lightning_fabric.seed_everything(args.seed)
 
-    # Load tokenizer
-    tokenizer = load_hf_tokenizer(hparams.model_name_or_path, fast_tokenizer=True)
-    tokenizer_path = hparams.get("tokenizer_path", hparams.model_name_or_path)
-    
-    # Load model
+    # Model and Tokenizer Path
     model_path = None
     if "model_name_or_path" in hparams:
         model_path = hparams.model_name_or_path
-    elif "model_name" in hparams:
-        model_path = hparams.model_name
+    elif "model_path" in hparams:
+        model_path = hparams.model_path
+    else:
+        raise Exception("The model path or name is not found in the hparams file.")
+
+    if "tokenizer_path" in hparams:
+        tokenizer_path = hparams.get("tokenizer_path", model_path)
+    else:
+        tokenizer_path = model_path
+
+    # Load tokenizer
+    tokenizer = load_hf_tokenizer(tokenizer_path, fast_tokenizer=True)
     
     # Get torch type
     torch_dtype_str = hparams.get("model_torch_dtype", "auto")
@@ -65,7 +72,7 @@ def rlhf_train(args: argparse.Namespace, hparams: HParams, create_dataset):
     if torch_dtype == torch.float16 and args.accelerator in ["cpu"]:
         raise RuntimeError("Models in float16 cannot run with the accelerator CPU.")
     
-     # Create Model
+    # Create Model
     model = create_hf_model(
         model_class=AutoModelForCausalLMWithValueHead,
         model_name_or_path=model_path,
@@ -102,9 +109,19 @@ def rlhf_train(args: argparse.Namespace, hparams: HParams, create_dataset):
         model_kwargs=hparams.get("model_kwargs", {}),
     )
 
+    # Reward Model and Tokenizer Path
+    reward_model_path = hparams.get("reward_model_path", None)
+    if "tokenizer_path" in hparams:
+        reward_tokenizer_path = hparams.get("reward_tokenizer_path", reward_model_path)
+    else:
+        reward_tokenizer_path = reward_model
+    
+    # Load Reward Tokenizer
+    reward_tokenizer = load_hf_tokenizer(reward_tokenizer_path, fast_tokenizer=True)
+
     # Load Reward Model
     reward_model = create_hf_model(
-        model_class=AutoModelForCausalLMWithValueHead,
+        model_class=AutoModelForSequenceClassification,
         model_name_or_path=hparams.get("reward_model_path", None),
         dtype=torch_dtype,
         disable_dropout=hparams.disable_dropout,
@@ -112,8 +129,29 @@ def rlhf_train(args: argparse.Namespace, hparams: HParams, create_dataset):
         model_kwargs=hparams.get("model_kwargs", {}),
     )
 
+    # Prepare the data
+    print("***** Prepare Dataset *****")
+    train_dataset, valid_dataset = create_dataset(
+        hparams=hparams,
+        data_path=hparams.data_path,
+        tokenizer_path=tokenizer_path,
+        max_seq_len=hparams.max_seq_len,
+    )
+
+    # DataLoaders creation:
+    print("***** DataLoaders creation *****")
+    collator = DataCollatorWithPadding(
+        tokenizer=load_hf_tokenizer(tokenizer_path, fast_tokenizer=True, show_info=True),
+        padding="longest",
+        max_length=hparams.max_seq_len
+    )
+ 
     # Create Config
     config_params = {}
+    config_params["tracker_kwargs"] = {}
+    config_params["accelerator_kwargs"] = {}
+    config_params["project_kwargs"] = {}
+
     config_params["exp_name"] = hparams.get("exp_name", "trl_train")
     config_params["seed"] = args.seed
 
@@ -135,20 +173,52 @@ def rlhf_train(args: argparse.Namespace, hparams: HParams, create_dataset):
             config_params["log_with"] = "tensorboard"
         elif logger_type.lower() in ["wandb"]:
             config_params["log_with"] = "wandb"
+        elif logger_type.lower() in ["comet", "comet_ml"]:
+            config_params["log_with"] = "comet_ml"
         else:
             raise Exception("Unsupported logger type.")
+        config_params["project_kwargs"]["logging_dir"] = logger_save_dir
         break
+    
+    config_params["accelerator_kwargs"]["device_placement"] = True
+    if "fp16" in hparams and hparams.fp16:
+        print("using fp16")
+        precision = "fp16"
+        assert (args.accelerator not in ["cpu"]), "models in float16 cannot run with the accelerator CPU."
+    elif "bf16" in hparams and hparams.bf16:
+        print("using bf16")
+        precision = "bf16"
+        assert (args.accelerator not in ["cpu"]), "models in bfloat16 cannot run with the accelerator CPU."
+    else:
+        print("using fp32")
+        precision = "no"
+    config_params["accelerator_kwargs"]["mixed_precision"] = precision
+
+    if args.accelerator == "cpu":
+        config_params["accelerator_kwargs"]["cpu"] = True
+    else:
+        config_params["accelerator_kwargs"]["cpu"] = False
+    config_params["accelerator_kwargs"]["mixed_precision"] = precision
+    config_params["accelerator_kwargs"]["mixed_precision"] = precision
 
     config_params["task_name"] = hparams.get("task_name", None)
     config_params["model_name"] = hparams.get("model_name_or_path", None)
-    config_params["query_dataset"] = hparams.get("data_path", None)
+    # config_params["query_dataset"] = hparams.get("data_path", None)
 
     config_params["learning_rate"] = hparams.get("learning_rate", 1.41e-5)
     config_params["gradient_checkpointing"] = hparams.get("gradient_checkpointing", False)
+    config_params["gradient_accumulation_steps"] = hparams.get("accumulate_grad_batches", 1)
+    config_params["mini_batch_size"] = hparams.get("per_device_train_batch_size", 128)
 
     config = PPOConfig(**config_params)
 
-    ppo_trainer = PPOTrainer(config, model, ref_model, tokenizer, dataset=dataset, data_collator=collator)
+    ppo_trainer = PPOTrainer(config, model, ref_model, tokenizer, dataset=train_dataset, data_collator=collator)
+
+    # Move Reward Model to CUDA
+    device = ppo_trainer.accelerator.device
+    if ppo_trainer.accelerator.num_processes == 1:
+        device = 0 if torch.cuda.is_available() else "cpu"  # to avoid a `pipeline` bug
+    reward_model.to(device)
 
     output_length_sampler = LengthSampler(hparams.get("output_min_length", 16), hparams.get("output_max_length", 1024))
 
@@ -158,9 +228,11 @@ def rlhf_train(args: argparse.Namespace, hparams: HParams, create_dataset):
         "top_p": 1.0,
         "do_sample": True,
         "pad_token_id": tokenizer.eos_token_id,
+        "eos_token_id": tokenizer.eos_token_id,
     }
 
-    for epoch, batch in tqdm.tqdm(enumerate(ppo_trainer.dataloader)):
+    for step, batch in enumerate(tqdm.tqdm(ppo_trainer.dataloader)):
+        # dict_keys(['input_ids', 'attention_mask', 'labels', 'response'])
         query_tensors = batch["input_ids"]
 
         response_tensors = []
@@ -168,16 +240,30 @@ def rlhf_train(args: argparse.Namespace, hparams: HParams, create_dataset):
             gen_len = output_length_sampler()
             generation_kwargs["max_new_tokens"] = gen_len
             response = ppo_trainer.generate(query, **generation_kwargs)
-            response_tensors.append(response.squeeze()[-gen_len:])
+            response_tensors.append(response.squeeze())
+            print(tokenizer.decode(response.squeeze()))
+            print("===========")
         batch["response"] = [tokenizer.decode(r.squeeze()) for r in response_tensors]
 
         # Compute reward score
-        texts = [q + r for q, r in zip(batch["query"], batch["response"])]
-        rewards = reward_model.forward(texts)
+        encoded_texts = reward_tokenizer(batch["response"],
+            padding="longest",
+            truncation=True,
+            return_tensors="pt",
+            add_special_tokens=True,
+        ).to(reward_model.device)
+
+        rewards = reward_model.forward(
+            input_ids=encoded_texts["input_ids"],
+            attention_mask=encoded_texts["attention_mask"],
+        )
 
         # Run PPO step
         stats = ppo_trainer.step(query_tensors, response_tensors, rewards)
         ppo_trainer.log_stats(stats, batch, rewards)
+
+        # Save Checkpoints
+        # TODO: ....
 
 
 
