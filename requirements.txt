@@ -1,11 +1,11 @@
-numpy==1.24.3
+numpy==1.26.2
 tenacity==8.2.2
 torch==2.3.0
 torchvision==0.18.0
 torchaudio==2.3.0
 lightning==2.2.5
 accelerate==0.27.2
-transformers==4.38.2
+transformers==4.42.3
 peft==0.11.1
 datasets==2.18.0
 blosc==1.11.1

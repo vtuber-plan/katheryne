@@ -6,6 +6,7 @@
 # https://opensource.org/licenses/MIT.
 
 from katheryne.stages.base import train, parse_args
+from katheryne.stages.rlhf_base import rlhf_train
 from katheryne.utils.hparams import HParams
 
 def auto_train_stage():
@@ -34,6 +35,9 @@ def auto_train_stage():
         from katheryne.light_modules.models.reward_model import RewardSequenceLanguageModel
         from katheryne.data.loader.reward import create_reward_dataset
         train(args, hparams, create_reward_dataset, RewardSequenceLanguageModel)
+    elif train_stage in ["ppo"]:
+        from katheryne.data.loader.rlhf import create_rlhf_dataset
+        rlhf_train(args, hparams, create_rlhf_dataset)
     else:
         raise NotImplementedError("The train stage has not been implemented.")
 
