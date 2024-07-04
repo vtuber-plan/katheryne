@@ -38,9 +38,15 @@ def create_hf_model(model_class,
     else:
         model_kwargs_dict = model_kwargs
     
-    if isinstance(model_class, AutoModelForSequenceClassification) or isinstance(model_class, AutoModelForTokenClassification):
+    if model_class in [AutoModelForTokenClassification]:
         if "num_labels" not in model_kwargs_dict:
-            model_kwargs_dict["num_labels"] = 1
+            model_config.num_labels = 1
+            print("Set num_labels of model as 1.")
+
+    if model_class in [AutoModelForSequenceClassification]:
+        if "num_labels" not in model_kwargs_dict:
+            model_config.num_labels = 1
+            print("Set num_labels of model as 1.")
 
     model = model_class.from_pretrained(
         model_name_or_path,

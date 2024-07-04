@@ -40,17 +40,21 @@ class DatasetPath(BaseModel):
 
 import datasets
 
-def restructure_datasets(dataset: DatasetPath, field: Union[str, List[str]], field_map: Dict[str, str]={}, split:str="train", data_dir=None, data_files=None):
+def load_data_split(dataset: DatasetPath, split:str="train", data_dir=None, data_files=None):
     dataset_name = dataset.path
-    raw_datasets = datasets.load_dataset(dataset_name, split=split, data_dir=data_dir, data_files=data_files)
-    train_dataset = raw_datasets
+    raw_dataset_split = datasets.load_dataset(dataset_name, split=split, data_dir=data_dir, data_files=data_files)
+    return raw_dataset_split
+
+def restructure_datasets(raw_dataset, field: Union[str, List[str]], field_map: Dict[str, str]={}):
+    train_dataset = raw_dataset
     cols = train_dataset.column_names
 
     if isinstance(field, str):
         cols.remove(field)
     else:
         for each_field in field:
-            cols.remove(each_field)
+            if each_field in cols:
+                cols.remove(each_field)
     train_dataset = train_dataset.remove_columns(cols)
 
     for old_name, new_name in field_map.items():
@@ -62,19 +66,20 @@ def restructure_datasets(dataset: DatasetPath, field: Union[str, List[str]], fie
 def create_dataset(dataset: DatasetPath, columns: List[str], preprocessor: Optional[Union[str, List[str]]]=None, seed=43) -> Tuple[datasets.Dataset, datasets.Dataset]:
     dataset_name = dataset.path
     raw_datasets = datasets.load_dataset(dataset_name)
+
     if "train" in raw_datasets:
-        raw_train_dataset = restructure_datasets(dataset, field=columns, split="train")
+        raw_train_dataset = load_data_split(dataset, split="train")
     else:
         raw_train_dataset = None
 
     if "validation" in raw_datasets:
-        raw_validation_dataset = restructure_datasets(dataset, field=columns, split="validation")
+        raw_validation_dataset = load_data_split(dataset, split="validation")
     elif "valid" in raw_datasets:
-        raw_validation_dataset = restructure_datasets(dataset, field=columns, split="valid")
+        raw_validation_dataset = load_data_split(dataset, split="valid")
     elif "eval" in raw_datasets:
-        raw_validation_dataset = restructure_datasets(dataset, field=columns, split="eval")
+        raw_validation_dataset = load_data_split(dataset, split="eval")
     elif "evaluation" in raw_datasets:
-        raw_validation_dataset = restructure_datasets(dataset, field=columns, split="evaluation")
+        raw_validation_dataset = load_data_split(dataset, split="evaluation")
     else:
         raw_validation_dataset = None
 
@@ -85,7 +90,7 @@ def create_dataset(dataset: DatasetPath, columns: List[str], preprocessor: Optio
     else:
         train_dataset = raw_train_dataset
         eval_dataset = raw_validation_dataset
-    
+
     if preprocessor is not None:
         preprocessor_fns = []
         if isinstance(preprocessor, str):
@@ -97,9 +102,16 @@ def create_dataset(dataset: DatasetPath, columns: List[str], preprocessor: Optio
 
         for fn_name in preprocessor_fns:
             fn = get_map_fn(fn_name)
+            if fn is None:
+                raise Exception(f"Dataset preprocessor `{fn_name}` is not found.")
             train_dataset = train_dataset.map(fn)
             eval_dataset = eval_dataset.map(fn)
-    
+
+    # restructure dataset
+    train_dataset = restructure_datasets(train_dataset, columns)
+    eval_dataset = restructure_datasets(eval_dataset, columns)
+
+    # Shuffle
     if dataset.shuffle:
         train_dataset = train_dataset.shuffle(seed=seed)
 

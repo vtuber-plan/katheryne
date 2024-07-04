@@ -100,6 +100,9 @@ def train(args: argparse.Namespace, hparams: HParams, create_dataset, lightning_
         model_class = AutoModelForSequenceClassification
     elif model_class_config == "AutoModelForTokenClassification":
         model_class = AutoModelForTokenClassification
+    elif model_class_config == "AutoModelForCausalLMWithValueHead":
+        from trl import AutoModelForCausalLMWithValueHead
+        model_class = AutoModelForCausalLMWithValueHead
     elif model_class_config == "AutoModel":
         model_class = AutoModel
     else:

@@ -6,6 +6,7 @@
 # https://opensource.org/licenses/MIT.
 
 import argparse
+import math
 import os
 import warnings
 
@@ -58,8 +59,10 @@ def rlhf_train(args: argparse.Namespace, hparams: HParams, create_dataset):
         tokenizer_path = model_path
 
     # Load tokenizer
-    tokenizer = load_hf_tokenizer(tokenizer_path, fast_tokenizer=True)
-    
+    tokenizer = load_hf_tokenizer(tokenizer_path, fast_tokenizer=True, padding_side="left")
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.pad_token_id = tokenizer.eos_token_id
+
     # Get torch type
     torch_dtype_str = hparams.get("model_torch_dtype", "auto")
     if torch_dtype_str != "auto":
@@ -73,8 +76,19 @@ def rlhf_train(args: argparse.Namespace, hparams: HParams, create_dataset):
         raise RuntimeError("Models in float16 cannot run with the accelerator CPU.")
     
     # Create Model
+    model_class_config = hparams.get("model_class", "AutoModelForCausalLM")
+    if model_class_config == "AutoModelForCausalLM":
+        model_class = AutoModelForCausalLM
+    elif model_class_config == "AutoModelForSequenceClassification":
+        model_class = AutoModelForSequenceClassification
+    elif model_class_config == "AutoModelForTokenClassification":
+        model_class = AutoModelForTokenClassification
+    elif model_class_config == "AutoModel":
+        model_class = AutoModel
+    else:
+        raise Exception("Unsupported model class config.")
     model = create_hf_model(
-        model_class=AutoModelForCausalLMWithValueHead,
+        model_class=model_class_config,
         model_name_or_path=model_path,
         dtype=torch_dtype,
         disable_dropout=hparams.disable_dropout,
@@ -101,7 +115,7 @@ def rlhf_train(args: argparse.Namespace, hparams: HParams, create_dataset):
 
     # Create ref model
     ref_model = create_hf_model(
-        model_class=AutoModelForCausalLMWithValueHead,
+        model_class=model_class_config,
         model_name_or_path=model_path,
         dtype=torch_dtype,
         disable_dropout=hparams.disable_dropout,
@@ -117,11 +131,13 @@ def rlhf_train(args: argparse.Namespace, hparams: HParams, create_dataset):
         reward_tokenizer_path = reward_model
     
     # Load Reward Tokenizer
-    reward_tokenizer = load_hf_tokenizer(reward_tokenizer_path, fast_tokenizer=True)
+    reward_tokenizer = load_hf_tokenizer(reward_tokenizer_path, fast_tokenizer=True, padding_side="left")
+    reward_tokenizer.pad_token = reward_tokenizer.eos_token
+    reward_tokenizer.pad_token_id = reward_tokenizer.eos_token_id
 
     # Load Reward Model
     reward_model = create_hf_model(
-        model_class=AutoModelForSequenceClassification,
+        model_class=AutoModelForCausalLMWithValueHead,
         model_name_or_path=hparams.get("reward_model_path", None),
         dtype=torch_dtype,
         disable_dropout=hparams.disable_dropout,
@@ -141,7 +157,7 @@ def rlhf_train(args: argparse.Namespace, hparams: HParams, create_dataset):
     # DataLoaders creation:
     print("***** DataLoaders creation *****")
     collator = DataCollatorWithPadding(
-        tokenizer=load_hf_tokenizer(tokenizer_path, fast_tokenizer=True, show_info=True),
+        tokenizer=load_hf_tokenizer(tokenizer_path, fast_tokenizer=True, show_info=True, padding_side="left"),
         padding="longest",
         max_length=hparams.max_seq_len
     )
@@ -208,7 +224,8 @@ def rlhf_train(args: argparse.Namespace, hparams: HParams, create_dataset):
     config_params["learning_rate"] = hparams.get("learning_rate", 1.41e-5)
     config_params["gradient_checkpointing"] = hparams.get("gradient_checkpointing", False)
     config_params["gradient_accumulation_steps"] = hparams.get("accumulate_grad_batches", 1)
-    config_params["mini_batch_size"] = hparams.get("per_device_train_batch_size", 128)
+    config_params["mini_batch_size"] = hparams.get("per_device_train_mini_batch_size", 128)
+    config_params["batch_size"] = hparams.get("per_device_train_batch_size", 128)
 
     config = PPOConfig(**config_params)
 
@@ -220,50 +237,74 @@ def rlhf_train(args: argparse.Namespace, hparams: HParams, create_dataset):
         device = 0 if torch.cuda.is_available() else "cpu"  # to avoid a `pipeline` bug
     reward_model.to(device)
 
-    output_length_sampler = LengthSampler(hparams.get("output_min_length", 16), hparams.get("output_max_length", 1024))
+    # output_length_sampler = LengthSampler(hparams.get("output_min_length", 16), hparams.get("output_max_length", 1024))
 
     generation_kwargs = {
-        "min_length": -1,
+        "num_beams": 1,
         "top_k": 0.0,
         "top_p": 1.0,
-        "do_sample": True,
+        "do_sample": False,
         "pad_token_id": tokenizer.eos_token_id,
         "eos_token_id": tokenizer.eos_token_id,
+        "max_length": 8192,
+        "max_new_tokens": 1024,
     }
 
-    for step, batch in enumerate(tqdm.tqdm(ppo_trainer.dataloader)):
-        # dict_keys(['input_ids', 'attention_mask', 'labels', 'response'])
-        query_tensors = batch["input_ids"]
+    generation_kwargs = {
+        "num_beams": 1,
+        "do_sample": False,
+        "pad_token_id": tokenizer.eos_token_id,
+        "eos_token_id": tokenizer.eos_token_id,
+        "max_new_tokens": 2048,
+    }
 
-        response_tensors = []
-        for query in query_tensors:
-            gen_len = output_length_sampler()
-            generation_kwargs["max_new_tokens"] = gen_len
-            response = ppo_trainer.generate(query, **generation_kwargs)
-            response_tensors.append(response.squeeze())
-            print(tokenizer.decode(response.squeeze()))
-            print("===========")
-        batch["response"] = [tokenizer.decode(r.squeeze()) for r in response_tensors]
+    max_epochs = hparams.get("max_epochs", 999)
+    max_steps = hparams.get("max_steps", -1)
+    epoch_steps = len(ppo_trainer.dataloader)
 
-        # Compute reward score
-        encoded_texts = reward_tokenizer(batch["response"],
-            padding="longest",
-            truncation=True,
-            return_tensors="pt",
-            add_special_tokens=True,
-        ).to(reward_model.device)
+    dataiter = iter(ppo_trainer.dataloader)
 
-        rewards = reward_model.forward(
-            input_ids=encoded_texts["input_ids"],
-            attention_mask=encoded_texts["attention_mask"],
-        )
+    for epoch in range(max_epochs):
+        for step in enumerate(tqdm.tqdm(range(epoch_steps))):
+            try:
+                batch = next(dataiter)
+            except StopIteration:
+                dataiter = iter(ppo_trainer.dataloader)
+                batch = next(dataiter)
 
-        # Run PPO step
-        stats = ppo_trainer.step(query_tensors, response_tensors, rewards)
-        ppo_trainer.log_stats(stats, batch, rewards)
+            # dict_keys(['input_ids', 'attention_mask', 'labels', 'response'])
+            query_tensor_input_ids = batch["input_ids"]
+            query_tensors = [query_tensor for query_tensor in query_tensor_input_ids]
 
-        # Save Checkpoints
-        # TODO: ....
+            response_tensors = ppo_trainer.generate(query_tensor=query_tensors, batch_size=2, return_prompt=True, **generation_kwargs)
+
+            batch["response"] = [tokenizer.decode(r.squeeze()) for r in response_tensors]
+            for i in range(len(query_tensors)):
+                print(tokenizer.decode(query_tensors[i].squeeze()))
+                print("--------------")
+                print(tokenizer.decode(response_tensors[i].squeeze()))
+                print("===========")
+
+            # Compute reward score
+            encoded_texts = reward_tokenizer(batch["response"],
+                padding="longest",
+                truncation=True,
+                return_tensors="pt",
+                add_special_tokens=True,
+            ).to(reward_model.device)
+
+            rewards = reward_model.forward(
+                input_ids=encoded_texts["input_ids"],
+                attention_mask=encoded_texts["attention_mask"],
+            )
+            score_tensor = rewards.logits
+            scores = [s.item() for s in score_tensor]
+            # Run PPO step
+            stats = ppo_trainer.step(query_tensors, response_tensors, scores)
+            ppo_trainer.log_stats(stats, batch, scores)
+
+            # Save Checkpoints
+            # TODO: ....
 
 
 

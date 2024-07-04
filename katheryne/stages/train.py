@@ -28,13 +28,13 @@ def auto_train_stage():
         from katheryne.data.loader.chat import create_chat_dataset
         train(args, hparams, create_chat_dataset, ChatLanguageModel)
     elif train_stage in ["reward", "rm"]:
-        from katheryne.light_modules.models.reward_model import RewardTokenLanguageModel
+        from katheryne.light_modules.models.reward_model import RewardLanguageModel
         from katheryne.data.loader.reward import create_reward_dataset
-        train(args, hparams, create_reward_dataset, RewardTokenLanguageModel)
+        train(args, hparams, create_reward_dataset, RewardLanguageModel)
     elif train_stage in ["reward_seq", "rm_seq"]:
-        from katheryne.light_modules.models.reward_model import RewardSequenceLanguageModel
+        from katheryne.light_modules.models.reward_model import RewardLanguageModel
         from katheryne.data.loader.reward import create_reward_dataset
-        train(args, hparams, create_reward_dataset, RewardSequenceLanguageModel)
+        train(args, hparams, create_reward_dataset, RewardLanguageModel)
     elif train_stage in ["ppo"]:
         from katheryne.data.loader.rlhf import create_rlhf_dataset
         rlhf_train(args, hparams, create_rlhf_dataset)

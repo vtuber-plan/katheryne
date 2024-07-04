@@ -6,7 +6,7 @@
         {
             "path": "Dahoas/rm-static",
             "sample": 1.0,
-            "preprocessor": "rm_static"
+            "preprocessor": "reward_rm_static"
         }
         
     ],

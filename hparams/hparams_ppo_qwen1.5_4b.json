@@ -4,21 +4,22 @@
     "end_of_conversation": 151643,
     "data_path": [
         {
-            "path": "Vtuber-plan/sharegpt-cleaned",
-            "sample": 0.05
+            "path": "Dahoas/rm-static",
+            "sample": 1.0,
+            "preprocessor": "rlhf_rm_static"
         }
-        
     ],
     "data_output_path": "./tmp/data_files/",
     "model_path": "Qwen/Qwen1.5-4B",
     "tokenizer_path": "Qwen/Qwen1.5-4B",
     "model_class": "AutoModelForSequenceClassification",
     "atten_class": "eager",
-    "reward_model_path": "Qwen/Qwen1.5-4B",
+    "reward_model_path": "llm_trainer_reward/lightning_logs/version_0/huggingface_format/checkpoint-step-1100",
     "reward_tokenizer_path": "Qwen/Qwen1.5-4B",
-    "per_device_train_batch_size": 2,
-    "per_device_eval_batch_size": 8,
-    "accumulate_grad_batches": 64,
+    "per_device_train_mini_batch_size": 2,
+    "per_device_train_batch_size": 4,
+    "per_device_eval_mini_batch_size": 8,
+    "accumulate_grad_batches": 1,
     "max_seq_len": 2048,
     "checkpoint_every_n_train_steps": 100,
     "log_every_n_steps": 1,

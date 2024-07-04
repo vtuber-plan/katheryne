@@ -41,9 +41,17 @@ class RLHFDataset(ConversationDataset):
         sample = self.dataset[idx]
 
         messages = sample["messages"]
+        if len(messages) > 0:
+            if messages[-1]["role"].lower() == "assistant":
+                messages[-1]["content"] = None
+            elif messages[-1]["role"].lower() == "user":
+                messages.append({
+                    "role": "assistant",
+                    "content": None,
+                })
         prompt, indices = self.get_prompt(messages)
-        if isinstance(self.end_of_conversation, str):
-            prompt += self.end_of_conversation
+        # if isinstance(self.end_of_conversation, str):
+        #     prompt += self.end_of_conversation
 
         encoded_text = self.tokenize(prompt, add_special_tokens=True)
 
@@ -56,7 +64,7 @@ class RLHFDataset(ConversationDataset):
             input_ids[-1] = self.tokenizer.eos_token_id
             attention_mask = attention_mask[:self.max_seq_len]
 
-        input_ids, attention_mask = self.add_end_of_conv(input_ids, attention_mask, self.end_of_conversation)
+        # input_ids, attention_mask = self.add_end_of_conv(input_ids, attention_mask, self.end_of_conversation)
 
         labels = input_ids.clone()
         labels = self.mask_label(prompt, labels, indices)
