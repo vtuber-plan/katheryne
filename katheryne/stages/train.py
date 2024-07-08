@@ -37,7 +37,16 @@ def auto_train_stage():
         train(args, hparams, create_reward_dataset, RewardLanguageModel)
     elif train_stage in ["ppo"]:
         from katheryne.data.loader.rlhf import create_rlhf_dataset
-        rlhf_train(args, hparams, create_rlhf_dataset)
+        from trl import PPOTrainer, PPOConfig
+        rlhf_train(args, hparams, create_rlhf_dataset, PPOConfig, PPOTrainer)
+    elif train_stage in ["dpo"]:
+        from katheryne.data.loader.rlhf import create_rlhf_dataset
+        from trl import DPOTrainer, DPOConfig
+        rlhf_train(args, hparams, create_rlhf_dataset, DPOConfig, DPOTrainer)
+    elif train_stage in ["kto"]:
+        from katheryne.data.loader.rlhf import create_rlhf_dataset
+        from trl import KTOTrainer, KTOConfig
+        rlhf_train(args, hparams, create_rlhf_dataset, KTOConfig, KTOTrainer)
     else:
         raise NotImplementedError("The train stage has not been implemented.")
 

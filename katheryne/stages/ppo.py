@@ -5,7 +5,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
 
-from katheryne.stages.base import train, parse_args
+from katheryne.stages.base import parse_args
+from katheryne.stages.rlhf_base import rlhf_train
 from katheryne.utils.hparams import HParams
 
 def ppo():
@@ -16,9 +17,9 @@ def ppo():
         raise Exception("Please specify the train stage in the hparam file.")
 
     if train_stage in ["ppo"]:
-        from katheryne.light_modules.models.pretrain_model import PretrainLanguageModel
-        from katheryne.data.loader.pretrain import create_pretrain_dataset
-        train(args, hparams, create_pretrain_dataset, PretrainLanguageModel)
+        from katheryne.data.loader.rlhf import create_rlhf_dataset
+        from trl import PPOTrainer, PPOConfig
+        rlhf_train(args, hparams, create_rlhf_dataset, PPOConfig, PPOTrainer)
     else:
         raise Exception("The train stage is not consistent with the stage in config.")
 

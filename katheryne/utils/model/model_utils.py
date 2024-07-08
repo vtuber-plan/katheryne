@@ -1,3 +1,4 @@
+import json
 import os
 import math
 from typing import Any, Dict, Literal, Optional
@@ -29,7 +30,16 @@ def create_hf_model(model_class,
     else:
         raise Exception("Unknown attention class")
     
-    model_config = AutoConfig.from_pretrained(model_name_or_path, trust_remote_code=trust_remote_code, **more_args)
+    model_json = os.path.join(model_name_or_path, "config.json")
+    adapter_model_json = os.path.join(model_name_or_path, "adapter_config.json")
+
+    if os.path.exists(adapter_model_json):
+        model_json_file = json.load(open(adapter_model_json))
+        base_model_name = model_json_file["base_model_name_or_path"]
+        model_config = AutoConfig.from_pretrained(base_model_name, trust_remote_code=True)
+    else:
+        model_config = AutoConfig.from_pretrained(model_name_or_path, trust_remote_code=True)
+
     if disable_dropout:
         model_config.dropout = 0.0
     
@@ -47,7 +57,6 @@ def create_hf_model(model_class,
         if "num_labels" not in model_kwargs_dict:
             model_config.num_labels = 1
             print("Set num_labels of model as 1.")
-
     model = model_class.from_pretrained(
         model_name_or_path,
         from_tf=bool(".ckpt" in model_name_or_path),
@@ -56,7 +65,31 @@ def create_hf_model(model_class,
         torch_dtype=dtype,
         **model_kwargs_dict,
     )
-
+    if os.path.exists(adapter_model_json):
+        from peft import (
+            PeftModelForCausalLM,
+            PeftModelForSeq2SeqLM,
+            PeftModelForSequenceClassification,
+            PeftModelForTokenClassification,
+            PeftModelForQuestionAnswering,
+            PeftModelForFeatureExtraction,
+        )
+        if "CausalLM" in model.__class__.__name__:
+            peft_model = PeftModelForCausalLM.from_pretrained(model, model_name_or_path, is_trainable=True)
+        elif "Seq2Seq" in model.__class__.__name__:
+            peft_model = PeftModelForSeq2SeqLM.from_pretrained(model, model_name_or_path, is_trainable=True)
+        elif "SequenceClassification" in model.__class__.__name__:
+            peft_model = PeftModelForSequenceClassification.from_pretrained(model, model_name_or_path, is_trainable=True)
+        elif "TokenClassification" in model.__class__.__name__:
+            peft_model = PeftModelForTokenClassification.from_pretrained(model, model_name_or_path, is_trainable=True)
+        elif "QuestionAnswering" in model.__class__.__name__:
+            peft_model = PeftModelForQuestionAnswering.from_pretrained(model, model_name_or_path, is_trainable=True)
+        elif "FeatureExtraction" in model.__class__.__name__:
+            peft_model = PeftModelForFeatureExtraction.from_pretrained(model, model_name_or_path, is_trainable=True)
+        else:
+            raise Exception("Unknown Type of Pretrained Model. Failed to load adaptor.")
+        if isinstance(peft_model, PeftModel) or isinstance(peft_model, PeftModelForCausalLM):
+            model = peft_model.merge_and_unload()
     # model.config.end_token_id = tokenizer.eos_token_id
     # model.config.pad_token_id = model.config.eos_token_id
     # model.resize_token_embeddings(int(8 * math.ceil(len(tokenizer) / 8.0)))  # make the vocab size multiple of 8
