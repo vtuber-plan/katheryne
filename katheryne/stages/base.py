@@ -128,8 +128,11 @@ def train(args: argparse.Namespace, hparams: HParams, create_dataset, lightning_
             fan_in_fan_out=hparams.lora.get("fan_in_fan_out", False),
             bias=hparams.lora.get("bias", 'none'),
             loftq_config=hparams.lora.get("loftq", None),
+            use_rslora=hparams.lora.get("use_rslora", False),
+            modules_to_save=hparams.lora.get("modules_to_save", None),
+            init_lora_weights=hparams.lora.get("init_lora_weights", True),
             use_dora=hparams.lora.get("use_dora", False),
-            task_type=hparams.lora.get("task_type", "CAUSAL_LM")
+            task_type=hparams.lora.get("task_type", "CAUSAL_LM"),
         )
         if hparams.get("gradient_checkpointing", False):
             model.enable_input_require_grads()

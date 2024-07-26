@@ -5,7 +5,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
 
-from typing import List, Optional
+from typing import List, Literal, Optional, Union
 from transformers import PreTrainedModel
 from peft import LoftQConfig, LoraConfig, get_peft_model, PeftModel
 
@@ -23,6 +23,9 @@ def setup_lora(
         fan_in_fan_out: bool=False,
         bias: str="none",
         loftq_config: dict=None,
+        use_rslora: bool=False,
+        modules_to_save: Optional[List[str]]=None,
+        init_lora_weights: Union[bool, Literal["gaussian", "pissa", "pissa_niter_[number of iters]", "loftq"]]=True,
         use_dora: bool=False,
         task_type: str="CAUSAL_LM"
     ) -> PeftModel:
@@ -43,6 +46,9 @@ def setup_lora(
         fan_in_fan_out=fan_in_fan_out,
         bias=bias,
         loftq_config=loftq_config,
+        use_rslora=use_rslora,
+        modules_to_save=modules_to_save,
+        init_lora_weights=init_lora_weights,
         use_dora=use_dora,
     )
     model = get_peft_model(base_model, lora_config)
