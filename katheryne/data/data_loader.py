@@ -54,8 +54,11 @@ def create_single_dataset(hparams: HParams, dataset_info: DatasetInfo, tokenizer
         raise Exception("Invalid source to load dataset from.")
     
     # TODO:
-    processed_dataset = process_dataset(raw_dataset, tokenizer)
+    # processed_dataset = process_dataset(raw_dataset, tokenizer)
+    processed_dataset = raw_dataset
     
+    if dataset_info.num_samples is not None:
+        processed_dataset = processed_dataset[:dataset_info.num_samples]
     return processed_dataset
 
 def create_datasets(hparams: HParams, datasets: DatasetPool, tokenizer_path: str):
