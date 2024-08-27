@@ -14,7 +14,9 @@ import glob
 import argparse
 import platform
 import warnings
+from katheryne.data.data_loader import create_datasets
 from katheryne.light_modules.strategies.strategy_utils import setup_strategy_ddp, setup_strategy_deepspeed, setup_strategy_fsdp
+from katheryne.utils.datasets_info import DatasetPool
 from katheryne.utils.hparams import HParams
 from katheryne.light_modules.utils.checkpoints import get_lastest_checkpoint
 from katheryne.data.collators import DataCollatorWithPadding
@@ -59,6 +61,7 @@ from transformers import (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train a transformers model on a causal language modeling task")
     parser.add_argument('--hparams', type=str, default="hparams/hparams_ppo_qwen1.5_4b.json", help='The hparam file of training')
+    parser.add_argument('--datasets', type=str, default="data/datasets_info.json", help='The datasets info file of training')
     parser.add_argument('--accelerator', type=str, default="gpu", help='training device')
     parser.add_argument('--device', type=str, default="", help='training device ids')
     parser.add_argument('--seed', type=int, default=43, help='model seed')
@@ -67,7 +70,7 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     return args
 
-def train(args: argparse.Namespace, hparams: HParams, create_dataset, lightning_module_class):
+def train(args: argparse.Namespace, hparams: HParams, datasets: DatasetPool, lightning_module_class):
     torch.autograd.set_detect_anomaly(True)
     master_port = os.environ.get("MASTER_PORT", None)
     master_addr = os.environ.get("MASTER_ADDR", None)
@@ -153,11 +156,10 @@ def train(args: argparse.Namespace, hparams: HParams, create_dataset, lightning_
     
     # Prepare the data
     print("***** Prepare Dataset *****")
-    train_dataset, valid_dataset = create_dataset(
+    train_dataset, valid_dataset = create_datasets(
         hparams=hparams,
-        data_path=hparams.data_path,
+        datasets=datasets,
         tokenizer_path=tokenizer_path,
-        max_seq_len=hparams.max_seq_len,
     )
     
     # DataLoaders creation:

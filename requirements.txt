@@ -13,3 +13,5 @@ tensorboardX==2.6.2.2
 tensorboard==2.15.1
 pydantic==2.6.3
 trl==0.9.4
+chatproto==0.0.2
+pydantic==2.6.3

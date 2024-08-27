@@ -1,0 +1,84 @@
+{
+    "wikipedia_en": {
+        "hf_hub_url": "olm/olm-wikipedia-20221220",
+        "ms_hub_url": "AI-ModelScope/olm-wikipedia-20221220",
+        "columns": {
+            "prompt": "text"
+        }
+    },
+    "wikipedia_zh": {
+        "hf_hub_url": "pleisto/wikipedia-cn-20230720-filtered",
+        "ms_hub_url": "AI-ModelScope/wikipedia-cn-20230720-filtered",
+        "columns": {
+            "prompt": "completion"
+        }
+    },
+    "wikipedia_en_100k": {
+        "hf_hub_url": "olm/olm-wikipedia-20221220",
+        "ms_hub_url": "AI-ModelScope/olm-wikipedia-20221220",
+        "columns": {
+            "prompt": "text"
+        },
+        "num_samples": 100000
+    },
+    "wikipedia_zh_30k": {
+        "hf_hub_url": "pleisto/wikipedia-cn-20230720-filtered",
+        "ms_hub_url": "AI-ModelScope/wikipedia-cn-20230720-filtered",
+        "columns": {
+            "prompt": "completion"
+        },
+        "num_samples": 30000
+    },
+    "github_repos": {
+        "hf_hub_url": "code-rag-bench/github-repos",
+        "columns": {
+            "prompt": "text"
+        },
+        "num_samples": 200000
+    },
+    "sharegpt_cleaned": {
+        "hf_hub_url": "Vtuber-plan/sharegpt-cleaned",
+        "formatting": "sharegpt",
+        "columns": {
+            "messages": "messages"
+        },
+        "tags": {
+            "role_tag": "role",
+            "content_tag": "content",
+            "user_tag": "user",
+            "assistant_tag": "assistant",
+            "system_tag": "system"
+        }
+    },
+    "sharegpt_cleaned_10k": {
+        "hf_hub_url": "Vtuber-plan/sharegpt-cleaned",
+        "formatting": "sharegpt",
+        "columns": {
+            "messages": "messages"
+        },
+        "tags": {
+            "role_tag": "role",
+            "content_tag": "content",
+            "user_tag": "user",
+            "assistant_tag": "assistant",
+            "system_tag": "system"
+        },
+        "num_samples": 10000
+    },
+    "hydraulic_QA_sft": {
+        "hf_hub_url": "Chennzi/hydraulic_QA_sft",
+        "columns": {
+            "system": "instruction",
+            "prompt": "input",
+            "response": "output"
+        }
+    },
+    "dusker_lawyer_llama": {
+        "hf_hub_url": "Dusker/lawyer-llama",
+        "columns": {
+            "system": "instruction",
+            "prompt": "input",
+            "response": "output"
+        }
+    }
+}

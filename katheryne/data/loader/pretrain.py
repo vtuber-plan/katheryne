@@ -20,6 +20,7 @@ from katheryne.datasets.pretrain_dataset import PretrainDataset
 # from katheryne.data.datasets import PretrainDataset, PretrainUniformDataset
 
 from katheryne.utils.data.data_utils import get_shuffle_idx, split_dataset
+from katheryne.utils.datasets_info import DatasetPool
 from katheryne.utils.diskist import Diskist, extend_diskist, write_diskist
 from katheryne.utils.hparams import HParams
 from katheryne.utils.model.tokenizer_utils import load_hf_tokenizer
@@ -27,7 +28,7 @@ from katheryne.utils.utils import chunked
 
 from datasets import load_dataset
 
-def create_pretrain_dataset(hparams: HParams, data_path: List[Union[str, DatasetPath]], tokenizer_path: str, max_seq_len: int):
+def create_pretrain_dataset(hparams: HParams, datasets: DatasetPool, tokenizer_path: str, max_seq_len: int):
     """
     Creates the pretrain dataset
     """

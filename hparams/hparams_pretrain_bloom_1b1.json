@@ -1,8 +1,6 @@
 {
     "train_stage": "pretrain",
-    "data_path": [
-        "bigscience-data/roots_zh-cn_wikipedia"
-    ],
+    "datasets": ["wikipedia_en_100k", "wikipedia_zh_30k"],
     "data_output_path": "./tmp/data_files/",
     "model_name_or_path": "bigscience/bloom-1b1",
     "per_device_train_batch_size": 4,
